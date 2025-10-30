@@ -1,0 +1,25 @@
+node_modules/
+dist/
+dist-tsc/
+build/
+*.log
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS generated files
+Thumbs.db

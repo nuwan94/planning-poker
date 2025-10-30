@@ -1,0 +1,32 @@
+{
+  "name": "@planning-poker/shared",
+  "version": "1.0.0",
+  "description": "Shared types, utilities, and constants for Planning Poker application",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.1.0"
+  },
+  "keywords": [
+    "planning-poker",
+    "shared",
+    "types",
+    "utilities"
+  ]
+}
