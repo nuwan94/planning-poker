@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../hooks/useRoom';
-import { useSocket } from '../contexts/SocketContext';
+
 import RoomInfo from '../components/RoomInfo';
 import ParticipantsList from '../components/ParticipantsList';
 import VotingPanel from '../components/VotingPanel';
@@ -12,7 +12,6 @@ import { AlertCircle, Loader } from 'lucide-react';
 const RoomPage: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { socket } = useSocket();
   const [userName, setUserName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
@@ -24,9 +23,12 @@ const RoomPage: React.FC = () => {
     votes,
     hasVoted,
     currentVote,
-    isConnected,
+
     actions
   } = useRoom(roomId || '');
+
+  // Derived values
+  const currentStory = room?.currentStory;
 
   useEffect(() => {
     if (!roomId) {
@@ -47,11 +49,8 @@ const RoomPage: React.FC = () => {
 
     setIsJoining(true);
     try {
-      await joinRoom({
-        id: socket?.id || `user-${Date.now()}`,
-        name: name.trim(),
-        isSpectator: false
-      });
+      // The useRoom hook automatically handles joining when it initializes
+      // Just store the user name and set joined state
       localStorage.setItem('planningPokerUserName', name.trim());
       setHasJoined(true);
     } catch (error) {
@@ -62,12 +61,11 @@ const RoomPage: React.FC = () => {
   };
 
   const handleLeaveRoom = () => {
-    leaveRoom();
     navigate('/');
   };
 
   // Show join form if user hasn't joined yet
-  if (!hasJoined && !loading) {
+  if (!hasJoined && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="card p-8 w-full max-w-md">
@@ -125,7 +123,7 @@ const RoomPage: React.FC = () => {
   }
 
   // Show loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -137,13 +135,13 @@ const RoomPage: React.FC = () => {
   }
 
   // Show error state
-  if (error) {
+  if (!room && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="card p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Room Error</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Room Not Found</h2>
+          <p className="text-gray-600 mb-6">The room you're looking for doesn't exist.</p>
           <button
             onClick={() => navigate('/')}
             className="btn btn-primary"
@@ -177,8 +175,6 @@ const RoomPage: React.FC = () => {
   }
 
   const isOwner = currentUser?.id === room.ownerId;
-  const currentStory = room.currentStory;
-  const currentVotes = currentStory?.votes || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -203,9 +199,9 @@ const RoomPage: React.FC = () => {
             <RoomInfo room={room} />
             <ParticipantsList
               participants={room.participants}
-              votes={currentVotes}
+              votes={votes}
               isVotingActive={room.isVotingActive}
-              votesRevealed={currentStory?.isRevealed || false}
+              areVotesRevealed={currentStory?.isRevealed || false}
             />
           </div>
 
@@ -216,12 +212,13 @@ const RoomPage: React.FC = () => {
               <StoryControls
                 currentStory={currentStory}
                 isVotingActive={room.isVotingActive}
-                votesRevealed={currentStory?.isRevealed || false}
-                onCreateStory={createStory}
-                onUpdateStory={updateStory}
-                onStartVoting={startVoting}
-                onRevealVotes={revealVotes}
-                onClearVotes={clearVotes}
+                areVotesRevealed={currentStory?.isRevealed || false}
+                canRevealVotes={room.isVotingActive && !currentStory?.isRevealed}
+                isRoomOwner={currentUser?.id === room.ownerId}
+                onStartVoting={actions.startVoting}
+                onRevealVotes={actions.revealVotes}
+                onClearVotes={actions.clearVotes}
+                onUpdateStory={actions.updateStory}
               />
             )}
 
@@ -263,17 +260,18 @@ const RoomPage: React.FC = () => {
             {/* Voting Panel */}
             {room.isVotingActive && currentUser && !currentUser.isSpectator && (
               <VotingPanel
-                onVote={submitVote}
-                userVote={currentVotes.find(v => v.userId === currentUser.id)?.value}
+                selectedDeck="fibonacci"
+                currentVote={currentVote}
+                hasVoted={hasVoted}
                 isVotingActive={room.isVotingActive}
-                votesRevealed={currentStory?.isRevealed || false}
+                onVote={actions.submitVote}
               />
             )}
 
             {/* Voting Results */}
             {currentStory?.isRevealed && (
               <VotingResults
-                votes={currentVotes}
+                votes={currentStory?.votes || []}
                 participants={room.participants}
                 isRevealed={currentStory.isRevealed}
               />

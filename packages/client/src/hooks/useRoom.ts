@@ -103,7 +103,7 @@ export const useRoom = (roomId: string) => {
       toast.success('Votes cleared');
     };
 
-    const handleStoryUpdated = (story: Story) => {
+    const handleStoryUpdated = (_story: Story) => {
       toast.success('Story updated');
     };
 
