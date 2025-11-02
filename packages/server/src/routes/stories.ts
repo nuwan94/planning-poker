@@ -1,149 +1,261 @@
 import { Router, Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { 
   Story, 
   CreateStoryRequest, 
   UpdateStoryRequest, 
-  ApiResponse 
+  ApiResponse,
+  Vote 
 } from '@planning-poker/shared';
+import { storyService } from '../services/storyService';
+import { 
+  createStoryValidation, 
+  updateStoryValidation, 
+  storyIdValidation,
+  roomQueryValidation,
+  voteValidation 
+} from '../middleware/validation';
 
 const router = Router();
 
-// In-memory storage (replace with database in production)
-const stories = new Map<string, Story>();
-
 // Get all stories for a room
-router.get('/', (req: Request, res: Response<ApiResponse<Story[]>>) => {
+router.get('/', roomQueryValidation, async (req: Request, res: Response<ApiResponse<Story[]>>) => {
   const { roomId } = req.query;
   
-  if (!roomId) {
-    return res.status(400).json({
+  try {
+    const stories = await storyService.getStoriesByRoom(roomId as string);
+    
+    res.json({
+      success: true,
+      data: stories
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Room ID is required'
+      message: 'Failed to fetch stories'
     });
   }
-
-  // Filter stories by room (in real app, this would be a database query)
-  const roomStories = Array.from(stories.values()).filter(story => 
-    story.id.startsWith(roomId as string)
-  );
-
-  res.json({
-    success: true,
-    data: roomStories
-  });
 });
 
 // Get story by ID
-router.get('/:id', (req: Request, res: Response<ApiResponse<Story>>) => {
+router.get('/:id', storyIdValidation, async (req: Request, res: Response<ApiResponse<Story>>) => {
   const { id } = req.params;
-  const story = stories.get(id);
+  
+  try {
+    const story = await storyService.getStoryById(id);
 
-  if (!story) {
-    return res.status(404).json({
+    if (!story) {
+      return res.status(404).json({
+        success: false,
+        message: 'Story not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Story not found'
+      message: 'Failed to fetch story'
     });
   }
-
-  res.json({
-    success: true,
-    data: story
-  });
 });
 
 // Create a new story
-router.post('/', (req: Request<{}, ApiResponse<Story>, CreateStoryRequest & { roomId: string }>, res: Response<ApiResponse<Story>>) => {
+router.post('/', createStoryValidation, async (req: Request<{}, ApiResponse<Story>, CreateStoryRequest>, res: Response<ApiResponse<Story>>) => {
   const { roomId, title, description, acceptanceCriteria } = req.body;
 
-  if (!roomId || !title || title.trim().length === 0) {
-    return res.status(400).json({
+  try {
+    const story = await storyService.createStory(roomId, title, description, acceptanceCriteria);
+    
+    res.status(201).json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Room ID and story title are required'
+      message: 'Failed to create story'
     });
   }
-
-  const storyId = `${roomId}_${uuidv4()}`;
-  
-  const story: Story = {
-    id: storyId,
-    title: title.trim(),
-    description: description?.trim(),
-    acceptanceCriteria: acceptanceCriteria?.filter(criteria => criteria.trim().length > 0),
-    votes: [],
-    isRevealed: false,
-    createdAt: new Date()
-  };
-
-  stories.set(storyId, story);
-
-  res.status(201).json({
-    success: true,
-    data: story
-  });
 });
 
 // Update story
-router.put('/:id', (req: Request<{id: string}, ApiResponse<Story>, UpdateStoryRequest>, res: Response<ApiResponse<Story>>) => {
+router.put('/:id', updateStoryValidation, async (req: Request<{id: string}, ApiResponse<Story>, UpdateStoryRequest>, res: Response<ApiResponse<Story>>) => {
   const { id } = req.params;
   const { title, description, acceptanceCriteria, finalEstimate } = req.body;
   
-  const story = stories.get(id);
-  
-  if (!story) {
-    return res.status(404).json({
-      success: false,
-      message: 'Story not found'
+  try {
+    const story = await storyService.updateStory(id, { 
+      title, 
+      description, 
+      acceptanceCriteria, 
+      finalEstimate 
     });
-  }
-
-  if (title !== undefined) {
-    if (title.trim().length === 0) {
-      return res.status(400).json({
+    
+    if (!story) {
+      return res.status(404).json({
         success: false,
-        message: 'Story title cannot be empty'
+        message: 'Story not found'
       });
     }
-    story.title = title.trim();
+
+    res.json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update story'
+    });
   }
-
-  if (description !== undefined) {
-    story.description = description.trim() || undefined;
-  }
-
-  if (acceptanceCriteria !== undefined) {
-    story.acceptanceCriteria = acceptanceCriteria.filter(criteria => criteria.trim().length > 0);
-  }
-
-  if (finalEstimate !== undefined) {
-    story.finalEstimate = finalEstimate.trim() || undefined;
-  }
-
-  stories.set(id, story);
-
-  res.json({
-    success: true,
-    data: story
-  });
 });
 
 // Delete story
-router.delete('/:id', (req: Request, res: Response<ApiResponse>) => {
+router.delete('/:id', storyIdValidation, async (req: Request, res: Response<ApiResponse>) => {
   const { id } = req.params;
   
-  if (!stories.has(id)) {
-    return res.status(404).json({
+  try {
+    const deleted = await storyService.deleteStory(id);
+    
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: 'Story not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Story deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Story not found'
+      message: 'Failed to delete story'
     });
   }
+});
 
-  stories.delete(id);
+// Vote on a story
+router.post('/:id/vote', [...storyIdValidation, ...voteValidation], async (req: Request, res: Response<ApiResponse<Story>>) => {
+  const { id } = req.params;
+  const { userId, value } = req.body;
   
-  res.json({
-    success: true,
-    message: 'Story deleted successfully'
-  });
+  try {
+    const vote: Vote = {
+      userId,
+      value,
+      submittedAt: new Date()
+    };
+    
+    const story = await storyService.addVote(id, vote);
+    
+    if (!story) {
+      return res.status(404).json({
+        success: false,
+        message: 'Story not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit vote'
+    });
+  }
+});
+
+// Clear votes for a story
+router.post('/:id/clear-votes', storyIdValidation, async (req: Request, res: Response<ApiResponse<Story>>) => {
+  const { id } = req.params;
+  
+  try {
+    const story = await storyService.clearVotes(id);
+    
+    if (!story) {
+      return res.status(404).json({
+        success: false,
+        message: 'Story not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to clear votes'
+    });
+  }
+});
+
+// Reveal votes for a story
+router.post('/:id/reveal', storyIdValidation, async (req: Request, res: Response<ApiResponse<Story>>) => {
+  const { id } = req.params;
+  
+  try {
+    const story = await storyService.revealVotes(id);
+    
+    if (!story) {
+      return res.status(404).json({
+        success: false,
+        message: 'Story not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reveal votes'
+    });
+  }
+});
+
+// Set final estimate
+router.post('/:id/estimate', storyIdValidation, async (req: Request, res: Response<ApiResponse<Story>>) => {
+  const { id } = req.params;
+  const { estimate } = req.body;
+  
+  if (!estimate || typeof estimate !== 'string') {
+    return res.status(400).json({
+      success: false,
+      message: 'Estimate is required'
+    });
+  }
+  
+  try {
+    const story = await storyService.setFinalEstimate(id, estimate);
+    
+    if (!story) {
+      return res.status(404).json({
+        success: false,
+        message: 'Story not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: story
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to set estimate'
+    });
+  }
 });
 
 export { router as storyRoutes };

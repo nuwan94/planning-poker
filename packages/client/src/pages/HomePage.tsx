@@ -1,35 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Clock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-
+import { Room } from '@planning-poker/shared';
+import { apiClient } from '../services/apiClient';
 import { generateId } from '@planning-poker/shared';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [roomName, setRoomName] = useState('');
+
   const [userName, setUserName] = useState('');
   const [joinRoomId, setJoinRoomId] = useState('');
 
   const handleCreateRoom = () => {
-    if (!roomName.trim()) {
-      toast.error('Please enter a room name');
-      return;
-    }
     if (!userName.trim()) {
       toast.error('Please enter your name');
       return;
     }
 
-    const roomId = generateId();
-    // Store user name in localStorage for the room
+    // Store user name in localStorage
     localStorage.setItem('planningPokerUser', JSON.stringify({
       name: userName.trim(),
       id: generateId()
     }));
     
-    toast.success('Room created successfully!');
-    navigate(`/room/${roomId}`);
+    // Navigate to create room page
+    navigate('/create-room');
   };
 
   const handleJoinRoom = () => {
@@ -90,19 +86,7 @@ const HomePage: React.FC = () => {
                 placeholder="Enter your name"
               />
             </div>
-            <div>
-              <label htmlFor="roomName" className="block text-sm font-medium text-gray-700 mb-2">
-                Room Name
-              </label>
-              <input
-                id="roomName"
-                type="text"
-                className="input-field"
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                placeholder="e.g., Sprint 23 Planning"
-              />
-            </div>
+
             <button
               type="button"
               onClick={handleCreateRoom}
@@ -146,8 +130,9 @@ const HomePage: React.FC = () => {
                 type="text"
                 className="input-field"
                 value={joinRoomId}
-                onChange={(e) => setJoinRoomId(e.target.value)}
-                placeholder="Enter room ID"
+                onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
+                placeholder="Enter room ID (e.g., A3B9K2)"
+                maxLength={6}
               />
             </div>
             <button

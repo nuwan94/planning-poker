@@ -7,6 +7,7 @@ import {
   Vote, 
   SOCKET_EVENTS 
 } from '@planning-poker/shared';
+import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 
 export const useRoom = (roomId: string) => {
@@ -20,7 +21,7 @@ export const useRoom = (roomId: string) => {
 
   // Initialize user and join room
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket || !isConnected || !roomId) return;
 
     // Get user from localStorage or create new one
     const savedUser = localStorage.getItem('planningPokerUser');
@@ -41,9 +42,24 @@ export const useRoom = (roomId: string) => {
 
     setCurrentUser(user);
     
-    // Join the room
-    socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user);
-    setIsLoading(false);
+    // First try to get room data from API
+    const initializeRoom = async () => {
+      try {
+        const roomData = await apiClient.getRoom(roomId);
+        if (roomData) {
+          setRoom(roomData);
+        }
+        
+        // Join the room via socket
+        socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Failed to initialize room:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeRoom();
 
     return () => {
       if (socket && user) {
@@ -56,6 +72,18 @@ export const useRoom = (roomId: string) => {
   useEffect(() => {
     if (!socket) return;
 
+    const handleRoomJoined = (joinedRoom: Room) => {
+      setRoom(joinedRoom);
+      // Check if current user has voted in the current story
+      if (joinedRoom.currentStory && currentUser) {
+        const userVote = joinedRoom.currentStory.votes.find(v => v.userId === currentUser.id);
+        setHasVoted(!!userVote);
+        setCurrentVote(userVote?.value || null);
+        setVotes(joinedRoom.currentStory.votes);
+      }
+      toast.success('Joined room successfully');
+    };
+
     const handleRoomUpdated = (updatedRoom: Room) => {
       setRoom(updatedRoom);
       // Check if current user has voted in the current story
@@ -63,111 +91,171 @@ export const useRoom = (roomId: string) => {
         const userVote = updatedRoom.currentStory.votes.find(v => v.userId === currentUser.id);
         setHasVoted(!!userVote);
         setCurrentVote(userVote?.value || null);
+        setVotes(updatedRoom.currentStory.votes);
       }
     };
 
-    const handleUserJoined = (user: User) => {
-      toast.success(`${user.name} joined the room`);
+    const handleRoomLeft = () => {
+      setRoom(null);
+      setCurrentUser(null);
+      toast.success('Left room successfully');
     };
 
-    const handleUserLeft = (userId: string) => {
-      const leftUser = room?.participants.find(p => p.id === userId);
-      if (leftUser) {
-        toast.success(`${leftUser.name} left the room`);
-      }
-    };
-
-    const handleStartVoting = (story: Story) => {
+    const handleVotingStarted = (updatedRoom: Room) => {
+      setRoom(updatedRoom);
       setVotes([]);
       setHasVoted(false);
       setCurrentVote(null);
-      toast.success(`Voting started for: ${story.title}`);
-    };
-
-    const handleVoteSubmitted = (userId: string) => {
-      const user = room?.participants.find(p => p.id === userId);
-      if (user && user.id !== currentUser?.id) {
-        toast.success(`${user.name} voted`);
+      if (updatedRoom.currentStory) {
+        toast.success(`Voting started for: ${updatedRoom.currentStory.title}`);
       }
     };
 
-    const handleVotesRevealed = (revealedVotes: Vote[]) => {
-      setVotes(revealedVotes);
-      toast.success('Votes revealed!');
+    const handleVoteSubmitted = (updatedStory: Story) => {
+      if (room) {
+        const updatedRoom = { ...room, currentStory: updatedStory };
+        setRoom(updatedRoom);
+        setVotes(updatedStory.votes);
+        
+        // Check if current user voted
+        if (currentUser) {
+          const userVote = updatedStory.votes.find(v => v.userId === currentUser.id);
+          if (userVote && userVote.value !== currentVote) {
+            setHasVoted(true);
+            setCurrentVote(userVote.value);
+          }
+        }
+      }
     };
 
-    const handleVotesCleared = () => {
-      setVotes([]);
-      setHasVoted(false);
-      setCurrentVote(null);
-      toast.success('Votes cleared');
+    const handleVotesRevealed = (revealedStory: Story) => {
+      if (room) {
+        const updatedRoom = { ...room, currentStory: revealedStory };
+        setRoom(updatedRoom);
+        setVotes(revealedStory.votes);
+        toast.success('Votes revealed!');
+      }
     };
 
-    const handleStoryUpdated = (_story: Story) => {
+    const handleVotesCleared = (clearedStory: Story) => {
+      if (room) {
+        const updatedRoom = { ...room, currentStory: clearedStory, isVotingActive: false };
+        setRoom(updatedRoom);
+        setVotes([]);
+        setHasVoted(false);
+        setCurrentVote(null);
+        toast.success('Votes cleared');
+      }
+    };
+
+    const handleStoryCreated = (newStory: Story) => {
+      toast.success(`New story created: ${newStory.title}`);
+    };
+
+    const handleStoryUpdated = (updatedStory: Story) => {
+      if (room && room.currentStory?.id === updatedStory.id) {
+        const updatedRoom = { ...room, currentStory: updatedStory };
+        setRoom(updatedRoom);
+      }
       toast.success('Story updated');
     };
 
-    const handleError = (message: string) => {
-      toast.error(message);
+    const handleFinalEstimateSet = (updatedStory: Story) => {
+      if (room && room.currentStory?.id === updatedStory.id) {
+        const updatedRoom = { ...room, currentStory: updatedStory };
+        setRoom(updatedRoom);
+        toast.success(`Final estimate set: ${updatedStory.finalEstimate}`);
+      }
+    };
+
+    const handleError = (error: { message: string }) => {
+      toast.error(error.message || 'An error occurred');
     };
 
     // Register event listeners
+    socket.on(SOCKET_EVENTS.ROOM_JOINED, handleRoomJoined);
     socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
-    socket.on(SOCKET_EVENTS.USER_JOINED, handleUserJoined);
-    socket.on(SOCKET_EVENTS.USER_LEFT, handleUserLeft);
-    socket.on(SOCKET_EVENTS.START_VOTING, handleStartVoting);
+    socket.on(SOCKET_EVENTS.ROOM_LEFT, handleRoomLeft);
+    socket.on(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
     socket.on(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
     socket.on(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
     socket.on(SOCKET_EVENTS.VOTES_CLEARED, handleVotesCleared);
+    socket.on(SOCKET_EVENTS.STORY_CREATED, handleStoryCreated);
     socket.on(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
+    socket.on(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
     socket.on(SOCKET_EVENTS.ERROR, handleError);
 
     return () => {
+      socket.off(SOCKET_EVENTS.ROOM_JOINED, handleRoomJoined);
       socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
-      socket.off(SOCKET_EVENTS.USER_JOINED, handleUserJoined);
-      socket.off(SOCKET_EVENTS.USER_LEFT, handleUserLeft);
-      socket.off(SOCKET_EVENTS.START_VOTING, handleStartVoting);
+      socket.off(SOCKET_EVENTS.ROOM_LEFT, handleRoomLeft);
+      socket.off(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
       socket.off(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
       socket.off(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
       socket.off(SOCKET_EVENTS.VOTES_CLEARED, handleVotesCleared);
+      socket.off(SOCKET_EVENTS.STORY_CREATED, handleStoryCreated);
       socket.off(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
+      socket.off(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
       socket.off(SOCKET_EVENTS.ERROR, handleError);
     };
-  }, [socket, room, currentUser]);
+  }, [socket, room, currentUser, currentVote]);
 
   // Actions
-  const submitVote = (value: string) => {
-    if (!socket || !currentUser || hasVoted) return;
+  const submitVote = async (value: string) => {
+    if (!socket || !currentUser || hasVoted || !room?.currentStory) return;
 
-    const vote: Omit<Vote, 'submittedAt'> = {
-      userId: currentUser.id,
-      value
-    };
+    try {
+      const vote = {
+        userId: currentUser.id,
+        value
+      };
 
-    socket.emit(SOCKET_EVENTS.SUBMIT_VOTE, vote);
-    setHasVoted(true);
-    setCurrentVote(value);
-    toast.success('Vote submitted');
+      // Submit vote via Socket.IO for real-time updates
+      socket.emit(SOCKET_EVENTS.VOTE_SUBMITTED, room.currentStory.id, vote);
+      
+      setHasVoted(true);
+      setCurrentVote(value);
+      toast.success('Vote submitted');
+    } catch (error) {
+      console.error('Failed to submit vote:', error);
+      toast.error('Failed to submit vote');
+    }
   };
 
   const startVoting = (story: Story) => {
-    if (!socket) return;
-    socket.emit(SOCKET_EVENTS.START_VOTING, story);
+    if (!socket || !roomId) return;
+    socket.emit(SOCKET_EVENTS.VOTING_STARTED, roomId, story.id);
   };
 
   const revealVotes = () => {
-    if (!socket) return;
-    socket.emit(SOCKET_EVENTS.REVEAL_VOTES);
+    if (!socket || !roomId || !room?.currentStory) return;
+    socket.emit(SOCKET_EVENTS.VOTES_REVEALED, roomId, room.currentStory.id);
   };
 
   const clearVotes = () => {
-    if (!socket) return;
-    socket.emit(SOCKET_EVENTS.CLEAR_VOTES);
+    if (!socket || !roomId || !room?.currentStory) return;
+    socket.emit(SOCKET_EVENTS.VOTES_CLEARED, roomId, room.currentStory.id);
   };
 
   const updateStory = (storyUpdate: Partial<Story>) => {
-    if (!socket) return;
-    socket.emit(SOCKET_EVENTS.UPDATE_STORY, storyUpdate);
+    if (!socket || !room?.currentStory) return;
+    socket.emit(SOCKET_EVENTS.STORY_UPDATED, room.currentStory.id, storyUpdate);
+  };
+
+  const createStory = async (storyData: { title: string; description?: string; acceptanceCriteria?: string[] }) => {
+    if (!socket || !roomId) return;
+    
+    try {
+      socket.emit(SOCKET_EVENTS.STORY_CREATED, roomId, storyData);
+    } catch (error) {
+      console.error('Failed to create story:', error);
+      toast.error('Failed to create story');
+    }
+  };
+
+  const setFinalEstimate = (estimate: string) => {
+    if (!socket || !room?.currentStory) return;
+    socket.emit(SOCKET_EVENTS.FINAL_ESTIMATE_SET, room.currentStory.id, estimate);
   };
 
   return {
@@ -183,7 +271,9 @@ export const useRoom = (roomId: string) => {
       startVoting,
       revealVotes,
       clearVotes,
-      updateStory
+      updateStory,
+      createStory,
+      setFinalEstimate
     }
   };
 };

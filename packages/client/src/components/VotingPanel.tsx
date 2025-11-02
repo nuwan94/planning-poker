@@ -21,7 +21,7 @@ const VotingPanel: React.FC<VotingPanelProps> = ({
 
   if (!isVotingActive) {
     return (
-      <div className="card p-6 text-center">
+      <div className="text-center">
         <h3 className="text-lg font-semibold text-gray-600 mb-2">
           Waiting for voting to start...
         </h3>
@@ -33,12 +33,12 @@ const VotingPanel: React.FC<VotingPanelProps> = ({
   }
 
   return (
-    <div className="card p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h4 className="text-lg font-semibold text-gray-800">
           Select your estimate
-        </h3>
-        <span className="text-sm text-gray-500">
+        </h4>
+        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
           Deck: {deck.name}
         </span>
       </div>
@@ -56,11 +56,14 @@ const VotingPanel: React.FC<VotingPanelProps> = ({
       </div>
       
       {hasVoted && (
-        <div className="mt-4 text-center">
-          <p className="text-green-600 font-medium">
-            ✓ You voted: <span className="font-bold">{currentVote}</span>
+        <div className="mt-6 text-center bg-green-50 rounded-lg p-4 border border-green-200">
+          <p className="text-green-700 font-medium flex items-center justify-center">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            You voted: <span className="font-bold ml-1">{currentVote}</span>
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-green-600 mt-1">
             Waiting for other team members...
           </p>
         </div>

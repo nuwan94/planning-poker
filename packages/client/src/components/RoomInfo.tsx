@@ -57,20 +57,23 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
   };
 
   return (
-    <div className="card p-6">
-      <div className="flex items-start justify-between mb-4">
+    <div>
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-1">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
             {room.name}
           </h2>
-          <p className="text-gray-600 text-sm">
-            Room ID: {room.id}
-          </p>
+          <div className="flex items-center bg-indigo-50 rounded-lg px-3 py-2">
+            <span className="text-indigo-700 text-sm font-medium mr-2">Room ID:</span>
+            <p className="text-indigo-800 text-lg font-mono font-bold">
+              {room.id}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={copyRoomUrl}
-            className="btn btn-outline btn-sm flex items-center gap-2"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-md flex items-center gap-2"
             title="Copy room URL"
           >
             {copied ? (
@@ -82,7 +85,7 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
           </button>
           <button
             onClick={shareRoom}
-            className="btn btn-primary btn-sm flex items-center gap-2"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:shadow-md flex items-center gap-2"
             title="Share room"
           >
             <Share2 className="w-4 h-4" />
@@ -92,53 +95,61 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
       </div>
 
       {/* Room Statistics */}
-      <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-200">
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-1">
-            <Users className="w-4 h-4 text-gray-500 mr-1" />
-            <span className="text-lg font-semibold text-gray-800">
+      <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
+        <div className="text-center bg-blue-50 rounded-lg p-4">
+          <div className="flex items-center justify-center mb-2">
+            <Users className="w-5 h-5 text-blue-600 mr-2" />
+            <span className="text-2xl font-bold text-blue-800">
               {room.participants.length}
             </span>
           </div>
-          <p className="text-xs text-gray-600">Participants</p>
+          <p className="text-sm font-medium text-blue-700">Participants</p>
         </div>
         
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-1">
-            <UserPlus className="w-4 h-4 text-gray-500 mr-1" />
-            <span className="text-lg font-semibold text-gray-800">
+        <div className="text-center bg-purple-50 rounded-lg p-4">
+          <div className="flex items-center justify-center mb-2">
+            <UserPlus className="w-5 h-5 text-purple-600 mr-2" />
+            <span className="text-2xl font-bold text-purple-800">
               {room.currentStory ? 1 : 0}
             </span>
           </div>
-          <p className="text-xs text-gray-600">Stories</p>
+          <p className="text-sm font-medium text-purple-700">Stories</p>
         </div>
         
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-1">
-            <Clock className="w-4 h-4 text-gray-500 mr-1" />
-            <span className="text-xs font-medium text-gray-800">
-              {formatDate(room.createdAt.toString())}
-            </span>
+        <div className="text-center bg-green-50 rounded-lg p-4">
+          <div className="flex items-center justify-center mb-2">
+            <Clock className="w-5 h-5 text-green-600 mr-2" />
           </div>
-          <p className="text-xs text-gray-600">Created</p>
+          <div>
+            <p className="text-xs font-medium text-green-800">
+              {formatDate(room.createdAt.toString())}
+            </p>
+            <p className="text-sm font-medium text-green-700 mt-1">Created</p>
+          </div>
         </div>
       </div>
 
       {/* Current Story Indicator */}
       {room.currentStory && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-blue-800 text-sm">
-            <span className="font-medium">Current Story:</span>{' '}
-            {room.currentStory.title}
+        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+          <p className="text-blue-800 font-medium flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="font-semibold">Current Story:</span>{' '}
+            <span className="ml-1">{room.currentStory.title}</span>
           </p>
         </div>
       )}
 
       {/* Voting Status */}
       {room.isVotingActive && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-800 text-sm font-medium text-center">
-            🗳️ Voting is currently active
+        <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
+          <p className="text-green-800 font-medium text-center flex items-center justify-center">
+            <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Voting is currently active
           </p>
         </div>
       )}

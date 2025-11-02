@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { 
   Room, 
   User, 
@@ -7,133 +6,195 @@ import {
   UpdateRoomRequest, 
   ApiResponse 
 } from '@planning-poker/shared';
+import { roomService } from '../services/roomService';
+import { 
+  createRoomValidation, 
+  updateRoomValidation, 
+  roomIdValidation,
+  joinRoomValidation 
+} from '../middleware/validation';
 
 const router = Router();
 
-// In-memory storage (replace with database in production)
-const rooms = new Map<string, Room>();
-
 // Get all rooms
-router.get('/', (req: Request, res: Response<ApiResponse<Room[]>>) => {
-  const roomList = Array.from(rooms.values());
-  res.json({
-    success: true,
-    data: roomList
-  });
+router.get('/', async (req: Request, res: Response<ApiResponse<Room[]>>) => {
+  try {
+    const rooms = await roomService.getAllRooms();
+    res.json({
+      success: true,
+      data: rooms
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch rooms'
+    });
+  }
 });
 
 // Get room by ID
-router.get('/:id', (req: Request, res: Response<ApiResponse<Room>>) => {
+router.get('/:id', roomIdValidation, async (req: Request, res: Response<ApiResponse<Room>>) => {
   const { id } = req.params;
-  const room = rooms.get(id);
+  
+  try {
+    const room = await roomService.getRoomById(id);
+    
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        message: 'Room not found'
+      });
+    }
 
-  if (!room) {
-    return res.status(404).json({
+    res.json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Room not found'
+      message: 'Failed to fetch room'
     });
   }
-
-  res.json({
-    success: true,
-    data: room
-  });
 });
 
 // Create a new room
-router.post('/', (req: Request<{}, ApiResponse<Room>, CreateRoomRequest>, res: Response<ApiResponse<Room>>) => {
-  const { name, description } = req.body;
+router.post('/', createRoomValidation, async (req: Request<{}, ApiResponse<Room>, CreateRoomRequest>, res: Response<ApiResponse<Room>>) => {
+  const { name, description, owner } = req.body;
 
-  if (!name || name.trim().length === 0) {
-    return res.status(400).json({
+  try {
+    const room = await roomService.createRoom(name, description, owner);
+    
+    res.status(201).json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Room name is required'
+      message: 'Failed to create room'
     });
   }
-
-  const roomId = uuidv4();
-  const userId = uuidv4();
-  
-  // Create default owner user (in real app, this would come from auth)
-  const owner: User = {
-    id: userId,
-    name: 'Room Owner',
-    isSpectator: false
-  };
-
-  const room: Room = {
-    id: roomId,
-    name: name.trim(),
-    description: description?.trim(),
-    ownerId: userId,
-    participants: [owner],
-    isVotingActive: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  rooms.set(roomId, room);
-
-  res.status(201).json({
-    success: true,
-    data: room
-  });
 });
 
 // Update room
-router.put('/:id', (req: Request<{id: string}, ApiResponse<Room>, UpdateRoomRequest>, res: Response<ApiResponse<Room>>) => {
+router.put('/:id', updateRoomValidation, async (req: Request<{id: string}, ApiResponse<Room>, UpdateRoomRequest>, res: Response<ApiResponse<Room>>) => {
   const { id } = req.params;
   const { name, description } = req.body;
   
-  const room = rooms.get(id);
-  
-  if (!room) {
-    return res.status(404).json({
-      success: false,
-      message: 'Room not found'
-    });
-  }
-
-  if (name !== undefined) {
-    if (name.trim().length === 0) {
-      return res.status(400).json({
+  try {
+    const room = await roomService.updateRoom(id, { name, description });
+    
+    if (!room) {
+      return res.status(404).json({
         success: false,
-        message: 'Room name cannot be empty'
+        message: 'Room not found'
       });
     }
-    room.name = name.trim();
+
+    res.json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update room'
+    });
   }
-
-  if (description !== undefined) {
-    room.description = description.trim() || undefined;
-  }
-
-  room.updatedAt = new Date();
-  rooms.set(id, room);
-
-  res.json({
-    success: true,
-    data: room
-  });
 });
 
 // Delete room
-router.delete('/:id', (req: Request, res: Response<ApiResponse>) => {
+router.delete('/:id', roomIdValidation, async (req: Request, res: Response<ApiResponse>) => {
   const { id } = req.params;
   
-  if (!rooms.has(id)) {
-    return res.status(404).json({
+  try {
+    const deleted = await roomService.deleteRoom(id);
+    
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: 'Room not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Room deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
-      message: 'Room not found'
+      message: 'Failed to delete room'
     });
   }
+});
 
-  rooms.delete(id);
+// Join room
+router.post('/:id/join', [...roomIdValidation, ...joinRoomValidation], async (req: Request, res: Response<ApiResponse<Room>>) => {
+  const { id } = req.params;
+  const { name, isSpectator = false } = req.body;
   
-  res.json({
-    success: true,
-    message: 'Room deleted successfully'
-  });
+  try {
+    const user: User = {
+      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      isSpectator
+    };
+    
+    const room = await roomService.addParticipant(id, user);
+    
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        message: 'Room not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to join room'
+    });
+  }
+});
+
+// Leave room
+router.post('/:id/leave', roomIdValidation, async (req: Request, res: Response<ApiResponse<Room>>) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+  
+  if (!userId) {
+    return res.status(400).json({
+      success: false,
+      message: 'User ID is required'
+    });
+  }
+  
+  try {
+    const room = await roomService.removeParticipant(id, userId);
+    
+    if (!room) {
+      return res.status(404).json({
+        success: false,
+        message: 'Room not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to leave room'
+    });
+  }
 });
 
 export { router as roomRoutes };

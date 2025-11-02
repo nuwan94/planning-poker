@@ -20,16 +20,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div className="min-h-screen bg-gray-50">
-          <App />
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              className: 'bg-gray-800 text-white',
-            }}
-          />
-        </div>
+        <App />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            className: 'bg-gray-800 text-white',
+          }}
+        />
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,

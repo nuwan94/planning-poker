@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
+import { connectDatabase } from './config/database';
 import { roomRoutes } from './routes/rooms';
 import { storyRoutes } from './routes/stories';
 import { setupSocketHandlers } from './socket/socketHandlers';
@@ -65,10 +66,16 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Planning Poker API available at http://localhost:${PORT}`);
-  console.log(`🔌 Socket.IO server ready for connections`);
-});
+const startServer = async () => {
+  await connectDatabase();
+  
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Planning Poker API available at http://localhost:${PORT}`);
+    console.log(`🔌 Socket.IO server ready for connections`);
+  });
+};
+
+startServer().catch(console.error);
 
 export { app, server, io };
