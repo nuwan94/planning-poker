@@ -31,22 +31,22 @@ export const SOCKET_EVENTS = {
   // Room management
   JOIN_ROOM: 'join_room',
   LEAVE_ROOM: 'leave_room',
-  USER_JOINED: 'user_joined',
-  USER_LEFT: 'user_left',
+  ROOM_JOINED: 'room_joined',
+  ROOM_LEFT: 'room_left',
   ROOM_UPDATED: 'room_updated',
   
   // Voting
-  START_VOTING: 'start_voting',
-  SUBMIT_VOTE: 'submit_vote',
+  VOTING_STARTED: 'voting_started',
   VOTE_SUBMITTED: 'vote_submitted',
-  REVEAL_VOTES: 'reveal_votes',
   VOTES_REVEALED: 'votes_revealed',
-  CLEAR_VOTES: 'clear_votes',
   VOTES_CLEARED: 'votes_cleared',
   
   // Stories
-  UPDATE_STORY: 'update_story',
+  STORY_CREATED: 'story_created',
   STORY_UPDATED: 'story_updated',
+  
+  // Final estimate
+  FINAL_ESTIMATE_SET: 'final_estimate_set',
   
   // Errors
   ERROR: 'error'

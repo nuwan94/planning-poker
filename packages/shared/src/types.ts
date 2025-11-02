@@ -85,6 +85,7 @@ export interface CreateRoomRequest {
   name: string;
   description?: string;
   cardDeckId?: string;
+  owner?: User;
 }
 
 export interface UpdateRoomRequest {
@@ -98,6 +99,7 @@ export interface CreateStoryRequest {
   title: string;
   description?: string;
   acceptanceCriteria?: string[];
+  roomId: string;
 }
 
 export interface UpdateStoryRequest {

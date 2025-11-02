@@ -18,6 +18,16 @@ export const generateId = (): string => {
   return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 };
 
+// Simple room ID generation (6 characters, alphanumeric)
+export const generateRoomId = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 // Date utilities
 export const formatDate = (date: Date): string => {
   return new Intl.DateTimeFormat('en-US', {
