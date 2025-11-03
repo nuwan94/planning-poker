@@ -215,7 +215,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                   className="btn-secondary flex items-center"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
-                  Clear Votes
+                  Revote
                 </button>
               )}
 
@@ -230,11 +230,24 @@ const StoryControls: React.FC<StoryControlsProps> = ({
               )}
 
               {currentStory.finalEstimate && (
-                <div className="flex items-center bg-green-100 text-green-800 px-3 py-2 rounded-lg">
-                  <span className="text-sm font-medium">
-                    Final Estimate: <span className="font-bold">{currentStory.finalEstimate}</span>
-                  </span>
-                </div>
+                <>
+                  <div className="flex items-center bg-green-100 text-green-800 px-3 py-2 rounded-lg">
+                    <span className="text-sm font-medium">
+                      Final Estimate: <span className="font-bold">{currentStory.finalEstimate}</span>
+                    </span>
+                  </div>
+                  
+                  {/* Start New Story button for owner */}
+                  {isRoomOwner && (
+                    <button
+                      onClick={() => setIsCreatingStory(true)}
+                      className="btn-primary flex items-center"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Start New Story
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}

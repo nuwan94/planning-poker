@@ -15,6 +15,8 @@ export interface Room {
   ownerId: string;
   participants: User[];
   currentStory?: Story;
+  storyHistory?: Story[];
+  cardDeckId?: string;
   isVotingActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -69,7 +69,7 @@ export class RoomService {
     return Promise.all(rooms.map(room => this.populateRoom(room)));
   }
 
-  async updateRoom(roomId: string, updates: Partial<Pick<IRoom, 'name' | 'description'>>): Promise<IRoom | null> {
+  async updateRoom(roomId: string, updates: Partial<Pick<IRoom, 'name' | 'description' | 'cardDeckId'>>): Promise<IRoom | null> {
     const room = await Room.findOneAndUpdate(
       { id: roomId },
       { ...updates, updatedAt: new Date() },
@@ -165,6 +165,28 @@ export class RoomService {
     return this.populateRoom(room);
   }
 
+  async getStoryHistory(roomId: string): Promise<IStory[]> {
+    console.log(`[RoomService] Getting story history for room: ${roomId}`);
+    
+    // Get all stories for the room, sorted by creation date (newest first)
+    const stories = await Story.find({ roomId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(`[RoomService] Found ${stories.length} stories`);
+    
+    return stories.map(story => ({
+      id: story.id,
+      title: story.title,
+      description: story.description,
+      acceptanceCriteria: story.acceptanceCriteria,
+      finalEstimate: story.finalEstimate,
+      votes: story.votes,
+      isRevealed: story.isRevealed,
+      createdAt: story.createdAt
+    }));
+  }
+
   private async populateRoom(room: IRoomDoc): Promise<IRoom> {
     // Fetch all participants
     const participants = await User.find({
@@ -189,6 +211,26 @@ export class RoomService {
       }
     }
 
+    // Fetch story history (all finalized stories, sorted by newest first)
+    const storyDocs = await Story.find({ 
+      roomId: room.id,
+      finalEstimate: { $exists: true, $ne: null }
+    })
+      .sort({ createdAt: -1 })
+      .limit(20) // Limit to last 20 stories
+      .lean();
+
+    const storyHistory = storyDocs.map(story => ({
+      id: story.id,
+      title: story.title,
+      description: story.description,
+      acceptanceCriteria: story.acceptanceCriteria,
+      finalEstimate: story.finalEstimate,
+      votes: story.votes,
+      isRevealed: story.isRevealed,
+      createdAt: story.createdAt
+    }));
+
     return {
       id: room.id,
       name: room.name,
@@ -202,6 +244,8 @@ export class RoomService {
         isSpectator: p.isSpectator
       })),
       currentStory,
+      storyHistory,
+      cardDeckId: room.cardDeckId || 'fibonacci',
       isVotingActive: room.isVotingActive,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt

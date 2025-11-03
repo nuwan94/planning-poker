@@ -1,4 +1,4 @@
-import { VALIDATION } from './constants';
+import { VALIDATION, CARD_DECKS } from './constants';
 
 // Validation utilities
 export const validateRoomName = (name: string): boolean => {
@@ -64,6 +64,76 @@ export const findMostCommonVote = (votes: string[]): string | null => {
     .map(([vote]) => vote);
   
   return mostCommon.length === 1 ? mostCommon[0] : null;
+};
+
+// Fibonacci number utilities
+export const FIBONACCI_SEQUENCE = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+export const isFibonacciNumber = (value: string | number): boolean => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(num)) return false;
+  return FIBONACCI_SEQUENCE.includes(num);
+};
+
+export const isValidCardValue = (value: string, deckId: string = 'fibonacci'): boolean => {
+  // Special values are not valid for final estimates
+  if (value === '?' || value === '☕') return false;
+  
+  // Find the deck
+  const deck = Object.values(CARD_DECKS).find((d: any) => d.id === deckId);
+  if (!deck) return false;
+  
+  // Check if value is in the deck and not a special value
+  return (deck as any).values.includes(value) && value !== '?' && value !== '☕';
+};
+
+export const findNearestFibonacci = (value: number): string => {
+  if (isNaN(value) || value < 0) return '0';
+  if (value === 0) return '0';
+  
+  // Find the closest Fibonacci number
+  let nearest = FIBONACCI_SEQUENCE[0];
+  let minDiff = Math.abs(value - nearest);
+  
+  for (const fib of FIBONACCI_SEQUENCE) {
+    const diff = Math.abs(value - fib);
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearest = fib;
+    }
+  }
+  
+  return nearest.toString();
+};
+
+export const findNearestCardValue = (value: number, deckId: string = 'fibonacci'): string => {
+  if (isNaN(value) || value < 0) return '0';
+  
+  // Find the deck
+  const deck = Object.values(CARD_DECKS).find((d: any) => d.id === deckId);
+  if (!deck) return findNearestFibonacci(value);
+  
+  // Filter numeric values from the deck (exclude ?, ☕)
+  const numericValues = (deck as any).values
+    .filter((v: string) => v !== '?' && v !== '☕' && !isNaN(parseFloat(v)))
+    .map((v: string) => parseFloat(v))
+    .sort((a: number, b: number) => a - b);
+  
+  if (numericValues.length === 0) return '0';
+  
+  // Find closest value
+  let nearest = numericValues[0];
+  let minDiff = Math.abs(value - nearest);
+  
+  for (const val of numericValues) {
+    const diff = Math.abs(value - val);
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearest = val;
+    }
+  }
+  
+  return nearest.toString();
 };
 
 // URL utilities

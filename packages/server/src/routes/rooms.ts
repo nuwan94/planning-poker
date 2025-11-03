@@ -90,10 +90,10 @@ router.post('/', createRoomValidation, async (req: Request<{}, ApiResponse<Room>
 // Update room
 router.put('/:id', updateRoomValidation, async (req: Request<{id: string}, ApiResponse<Room>, UpdateRoomRequest>, res: Response<ApiResponse<Room>>) => {
   const { id } = req.params;
-  const { name, description } = req.body;
+  const { name, description, cardDeckId } = req.body;
   
   try {
-    const room = await roomService.updateRoom(id, { name, description });
+    const room = await roomService.updateRoom(id, { name, description, cardDeckId });
     
     if (!room) {
       return res.status(404).json({
@@ -208,6 +208,28 @@ router.post('/:id/leave', roomIdValidation, async (req: Request, res: Response<A
     res.status(500).json({
       success: false,
       message: 'Failed to leave room'
+    });
+  }
+});
+
+// Get room story history
+router.get('/:id/stories', roomIdValidation, async (req: Request, res: Response<ApiResponse<Room['storyHistory']>>) => {
+  const { id } = req.params;
+  
+  try {
+    console.log(`[API] Getting story history for room: ${id}`);
+    const storyHistory = await roomService.getStoryHistory(id);
+    
+    console.log(`[API] Found ${storyHistory.length} stories in history`);
+    res.json({
+      success: true,
+      data: storyHistory
+    });
+  } catch (error) {
+    console.error(`Error fetching story history for room ${id}:`, error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch story history'
     });
   }
 });

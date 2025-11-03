@@ -8,6 +8,7 @@ export interface IRoom extends Document {
   ownerId: string;
   participantIds: string[];
   currentStoryId?: string;
+  cardDeckId?: string;
   isVotingActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +42,10 @@ const RoomSchema = new Schema<IRoom>({
   }],
   currentStoryId: {
     type: String
+  },
+  cardDeckId: {
+    type: String,
+    default: 'fibonacci'
   },
   isVotingActive: {
     type: Boolean,

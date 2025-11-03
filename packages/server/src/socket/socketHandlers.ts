@@ -86,10 +86,17 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         await roomService.setVotingActive(roomId, true);
         await roomService.setCurrentStory(roomId, storyId);
         
-        const room = await roomService.getRoomById(roomId);
-        if (room) {
-          io.to(roomId).emit(SOCKET_EVENTS.VOTING_STARTED, room);
-          console.log(`[Socket] Voting started for story ${storyId}`);
+        const story = await storyService.getStoryById(storyId);
+        if (story) {
+          io.to(roomId).emit(SOCKET_EVENTS.VOTING_STARTED, story);
+          console.log(`[Socket] Voting started for story ${storyId}, broadcasted to room`);
+          
+          // Also broadcast room update to sync all participants
+          const room = await roomService.getRoomById(roomId);
+          if (room) {
+            io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
+            console.log(`[Socket] Room updated broadcasted after voting started`);
+          }
         }
       } catch (error) {
         console.error('[Socket] Error in VOTING_STARTED:', error);
@@ -134,13 +141,20 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
     });
 
     socket.on(SOCKET_EVENTS.VOTES_CLEARED, async (roomId: string, storyId: string) => {
-      console.log(`[Socket] VOTES_CLEARED: story ${storyId} in room ${roomId}`);
+      console.log(`[Socket] VOTES_CLEARED (Revote): story ${storyId} in room ${roomId}`);
       
       try {
         const story = await storyService.clearVotes(storyId);
         if (story) {
           io.to(roomId).emit(SOCKET_EVENTS.VOTES_CLEARED, story);
-          console.log(`[Socket] Votes cleared for story ${storyId}`);
+          console.log(`[Socket] Votes cleared (Revote) for story ${storyId} - final estimate removed`);
+          
+          // Broadcast room update to refresh story history since final estimate was removed
+          const room = await roomService.getRoomById(roomId);
+          if (room) {
+            io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
+            console.log(`[Socket] Room updated broadcasted after revote`);
+          }
         }
       } catch (error) {
         console.error('[Socket] Error in VOTES_CLEARED:', error);
@@ -184,10 +198,17 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         if (story) {
           io.to(roomId).emit(SOCKET_EVENTS.FINAL_ESTIMATE_SET, story);
           console.log(`[Socket] Final estimate set for story ${storyId}`);
+          
+          // Broadcast room update to refresh story history for all participants
+          const room = await roomService.getRoomById(roomId);
+          if (room) {
+            io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
+            console.log(`[Socket] Room updated broadcasted with new story history`);
+          }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Socket] Error in FINAL_ESTIMATE_SET:', error);
-        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to set final estimate' });
+        socket.emit(SOCKET_EVENTS.ERROR, { message: error.message || 'Failed to set final estimate' });
       }
     });
 

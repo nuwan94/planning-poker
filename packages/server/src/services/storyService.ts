@@ -1,5 +1,6 @@
-import { Story as IStory, Vote } from '@planning-poker/shared';
+import { Story as IStory, Vote, isValidCardValue } from '@planning-poker/shared';
 import { Story, IStory as IStoryDoc } from '../models/Story';
+import { Room } from '../models/Room';
 import { v4 as uuidv4 } from 'uuid';
 
 export class StoryService {
@@ -74,7 +75,10 @@ export class StoryService {
   async clearVotes(storyId: string): Promise<IStory | null> {
     const story = await Story.findOneAndUpdate(
       { id: storyId },
-      { votes: [], isRevealed: false },
+      { 
+        $set: { votes: [], isRevealed: false },
+        $unset: { finalEstimate: '' }  // Remove finalEstimate field completely
+      },
       { new: true }
     );
     
@@ -94,6 +98,23 @@ export class StoryService {
   }
 
   async setFinalEstimate(storyId: string, estimate: string): Promise<IStory | null> {
+    // Get the story to find the room
+    const storyDoc = await Story.findOne({ id: storyId });
+    if (!storyDoc) {
+      console.error(`[StoryService] Story not found: ${storyId}`);
+      return null;
+    }
+
+    // Get the room to check the card deck
+    const room = await Room.findOne({ id: storyDoc.roomId });
+    const cardDeckId = room?.cardDeckId || 'fibonacci';
+
+    // Validate that the estimate is a valid card value for this deck
+    if (!isValidCardValue(estimate, cardDeckId)) {
+      console.error(`[StoryService] Invalid final estimate: ${estimate} for deck ${cardDeckId}`);
+      throw new Error(`Final estimate must be a valid value from the ${cardDeckId} deck (excluding ? and ☕)`);
+    }
+
     const story = await Story.findOneAndUpdate(
       { id: storyId },
       { finalEstimate: estimate },
