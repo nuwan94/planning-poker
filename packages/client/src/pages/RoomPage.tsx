@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
 import { Story, Vote, SOCKET_EVENTS, CARD_DECKS } from '@planning-poker/shared';
-import { Loader, Home, Edit2, Check, X, Crown } from 'lucide-react';
+import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 import Avatar from '../components/Avatar';
@@ -21,6 +21,7 @@ const RoomPage: React.FC = () => {
   const [newRoomName, setNewRoomName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingDeck, setIsEditingDeck] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   // Story and voting state
   const [currentStory, setCurrentStory] = useState<Story | undefined>(room?.currentStory);
@@ -164,6 +165,54 @@ const RoomPage: React.FC = () => {
       toast.error('Failed to update room name');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const copyRoomUrl = async () => {
+    if (!room) return;
+    
+    const roomUrl = `${window.location.origin}/room/${room.id}`;
+    
+    try {
+      await navigator.clipboard.writeText(roomUrl);
+      setCopied(true);
+      toast.success('Room link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = roomUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      toast.success('Room link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const shareRoom = async () => {
+    if (!room) return;
+    
+    const roomUrl = `${window.location.origin}/room/${room.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join Planning Poker: ${room.name}`,
+          text: `You're invited to join a planning poker session: ${room.name}`,
+          url: roomUrl,
+        });
+      } catch (error) {
+        // User cancelled or sharing failed, fallback to copy
+        if ((error as Error).name !== 'AbortError') {
+          copyRoomUrl();
+        }
+      }
+    } else {
+      // Fallback to copy for browsers that don't support Web Share API
+      copyRoomUrl();
     }
   };
 
@@ -375,13 +424,44 @@ const RoomPage: React.FC = () => {
                 )}
               </div>
             </div>
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <Home className="w-4 h-4" />
-              Leave Room
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={copyRoomUrl}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-all ${
+                  copied 
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700' 
+                    : 'border-slate-300 hover:bg-slate-50 text-slate-700'
+                }`}
+                title="Copy room link"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span className="hidden sm:inline">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">Copy Link</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={shareRoom}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg transition-all shadow-md hover:shadow-lg"
+                title="Share room"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Share</span>
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">Leave Room</span>
+              </button>
+            </div>
           </div>
         </div>
 

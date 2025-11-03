@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Room } from '@planning-poker/shared';
 import { apiClient } from '../services/apiClient';
-import { Briefcase, Users, Clock, ChevronRight, Loader, Home, Plus, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Briefcase, Users, Clock, ChevronRight, Loader, Home, Plus, Trash2, X, AlertTriangle, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyRoomsPage: React.FC = () => {
@@ -12,6 +12,7 @@ const MyRoomsPage: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [copiedRoomId, setCopiedRoomId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,6 +80,30 @@ const MyRoomsPage: React.FC = () => {
 
   const handleCancelDelete = () => {
     setRoomToDelete(null);
+  };
+
+  const copyRoomUrl = async (e: React.MouseEvent, roomId: string) => {
+    e.stopPropagation(); // Prevent room card click
+    
+    const roomUrl = `${window.location.origin}/room/${roomId}`;
+    
+    try {
+      await navigator.clipboard.writeText(roomUrl);
+      setCopiedRoomId(roomId);
+      toast.success('Room link copied to clipboard!');
+      setTimeout(() => setCopiedRoomId(null), 2000);
+    } catch (error) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = roomUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedRoomId(roomId);
+      toast.success('Room link copied to clipboard!');
+      setTimeout(() => setCopiedRoomId(null), 2000);
+    }
   };
 
   const formatDate = (date: Date) => {
@@ -194,19 +219,36 @@ const MyRoomsPage: React.FC = () => {
                 className="card p-6 group hover:scale-102 hover:shadow-xl transition-all duration-200 animate-slide-up relative"
                 style={{ animationDelay: `${0.3 + index * 0.05}s` }}
               >
-                {/* Delete button */}
-                <button
-                  onClick={(e) => handleDeleteClick(e, room)}
-                  disabled={deletingRoomId === room.id}
-                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 z-10"
-                  title="Delete room"
-                >
-                  {deletingRoomId === room.id ? (
-                    <Loader className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-5 h-5" />
-                  )}
-                </button>
+                {/* Action buttons */}
+                <div className="absolute top-4 right-4 flex gap-2 z-10">
+                  <button
+                    onClick={(e) => copyRoomUrl(e, room.id)}
+                    className={`p-2 rounded-lg transition-all duration-200 ${
+                      copiedRoomId === room.id
+                        ? 'text-emerald-600 bg-emerald-50'
+                        : 'text-slate-400 hover:text-primary-600 hover:bg-primary-50'
+                    }`}
+                    title="Copy room link"
+                  >
+                    {copiedRoomId === room.id ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <Copy className="w-5 h-5" />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteClick(e, room)}
+                    disabled={deletingRoomId === room.id}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                    title="Delete room"
+                  >
+                    {deletingRoomId === room.id ? (
+                      <Loader className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
 
                 {/* Room content - clickable */}
                 <div
