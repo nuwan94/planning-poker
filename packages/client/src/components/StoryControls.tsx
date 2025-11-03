@@ -75,19 +75,19 @@ const StoryControls: React.FC<StoryControlsProps> = ({
 
   if (isCreatingStory) {
     return (
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 className="text-xl font-semibold text-slate-900 mb-6">
           Create New Story
         </h3>
         <div className="space-y-4">
           <div>
-            <label htmlFor="storyTitle" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="storyTitle" className="block text-sm font-medium text-slate-700 mb-2">
               Story Title *
             </label>
             <input
               id="storyTitle"
               type="text"
-              className="input-field"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
               value={storyTitle}
               onChange={(e) => setStoryTitle(e.target.value)}
               placeholder="As a user, I want to..."
@@ -95,22 +95,23 @@ const StoryControls: React.FC<StoryControlsProps> = ({
             />
           </div>
           <div>
-            <label htmlFor="storyDescription" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="storyDescription" className="block text-sm font-medium text-slate-700 mb-2">
               Description (Optional)
             </label>
             <textarea
               id="storyDescription"
-              className="input-field h-20 resize-none"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all resize-none"
+              rows={3}
               value={storyDescription}
               onChange={(e) => setStoryDescription(e.target.value)}
               placeholder="Additional details about the story..."
             />
           </div>
-          <div className="flex space-x-3">
+          <div className="flex gap-3 pt-2">
             <button
               onClick={handleCreateStory}
               disabled={!storyTitle.trim()}
-              className="btn-primary flex items-center"
+              className="flex-1 btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-4 h-4 mr-2" />
               Start Voting
@@ -121,7 +122,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                 setStoryTitle('');
                 setStoryDescription('');
               }}
-              className="btn-secondary flex items-center"
+              className="flex-1 btn-secondary flex items-center justify-center"
             >
               <X className="w-4 h-4 mr-2" />
               Cancel
@@ -133,7 +134,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
   }
 
   return (
-    <div className="card p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       {currentStory ? (
         <div>
           <div className="flex items-start justify-between mb-4">
@@ -142,12 +143,13 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                 <div className="space-y-3">
                   <input
                     type="text"
-                    className="input-field text-lg font-semibold"
+                    className="w-full text-xl font-semibold px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
                     value={storyTitle}
                     onChange={(e) => setStoryTitle(e.target.value)}
                   />
                   <textarea
-                    className="input-field h-16 resize-none"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-none"
+                    rows={3}
                     value={storyDescription}
                     onChange={(e) => setStoryDescription(e.target.value)}
                     placeholder="Story description..."
@@ -172,15 +174,15 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center mb-2">
-                    <FileText className="w-5 h-5 text-primary-600 mr-2" />
-                    <h3 className="text-lg font-semibold text-gray-800">
+                  <div className="flex items-center mb-3">
+                    <FileText className="w-5 h-5 text-primary-600 mr-2 flex-shrink-0" />
+                    <h3 className="text-xl font-semibold text-slate-900">
                       {currentStory.title}
                     </h3>
                     {isRoomOwner && (
                       <button
                         onClick={startEditing}
-                        className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="ml-2 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                         title="Edit story"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -188,7 +190,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                     )}
                   </div>
                   {currentStory.description && (
-                    <p className="text-gray-600 mb-4">{currentStory.description}</p>
+                    <p className="text-slate-600 leading-relaxed">{currentStory.description}</p>
                   )}
                 </div>
               )}
@@ -197,7 +199,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
 
           {!isEditingStory && (
             <div className="flex flex-wrap gap-3">
-              {isVotingActive && !areVotesRevealed && canRevealVotes && (
+              {isRoomOwner && isVotingActive && !areVotesRevealed && canRevealVotes && (
                 <button
                   onClick={onRevealVotes}
                   className="btn-primary flex items-center"
@@ -207,7 +209,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                 </button>
               )}
               
-              {areVotesRevealed && (
+              {isRoomOwner && areVotesRevealed && (
                 <button
                   onClick={onClearVotes}
                   className="btn-secondary flex items-center"
@@ -215,6 +217,16 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Clear Votes
                 </button>
+              )}
+
+              {/* Message for non-owners */}
+              {!isRoomOwner && !areVotesRevealed && canRevealVotes && (
+                <div className="flex items-center bg-blue-50 text-blue-700 px-4 py-2.5 rounded-lg border border-blue-200">
+                  <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm">Waiting for owner to reveal votes...</span>
+                </div>
               )}
 
               {currentStory.finalEstimate && (
@@ -228,30 +240,36 @@ const StoryControls: React.FC<StoryControlsProps> = ({
           )}
         </div>
       ) : (
-        <div className="text-center">
+        <div className="text-center py-12">
           {isRoomOwner ? (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            <div className="max-w-md mx-auto">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full mb-4">
+                <FileText className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">
                 Ready to start planning?
               </h3>
-              <p className="text-gray-600 mb-4">
-                Create a story to begin voting with your team
+              <p className="text-slate-600 mb-6">
+                Create your first story to begin the estimation session with your team
               </p>
               <button
                 onClick={() => setIsCreatingStory(true)}
-                className="btn-primary flex items-center mx-auto"
+                className="btn-primary flex items-center justify-center mx-auto px-6 py-3 text-base"
               >
-                <Play className="w-4 h-4 mr-2" />
+                <Play className="w-5 h-5 mr-2" />
                 Create Story
               </button>
             </div>
           ) : (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-600 mb-2">
+            <div className="max-w-md mx-auto">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
+                <FileText className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">
                 Waiting for a story...
               </h3>
-              <p className="text-gray-500">
-                The room moderator will create a story to start voting
+              <p className="text-slate-500">
+                The room owner will create a story to start the estimation session
               </p>
             </div>
           )}

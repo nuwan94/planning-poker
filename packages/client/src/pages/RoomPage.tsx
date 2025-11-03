@@ -1,29 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../hooks/useRoom';
+import { useSocket } from '../contexts/SocketContext';
+import { Story, Vote, SOCKET_EVENTS } from '@planning-poker/shared';
 import { Loader, Home, Edit2, Check, X, Crown } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 import Avatar from '../components/Avatar';
+import StoryControls from '../components/StoryControls';
+import VotingPanel from '../components/VotingPanel';
+import VotingResults from '../components/VotingResults';
 
 const RoomPage: React.FC = () => {
   const { id: roomId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { room, currentUser, isLoading } = useRoom(roomId || '');
+  const { socket } = useSocket();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Story and voting state
+  const [currentStory, setCurrentStory] = useState<Story | undefined>(room?.currentStory);
+  const [votes, setVotes] = useState<Vote[]>([]);
+  const [isVotingActive, setIsVotingActive] = useState(false);
+  const [areVotesRevealed, setAreVotesRevealed] = useState(false);
 
   // Debug: Log room data to verify avatarUrl is present
-  React.useEffect(() => {
+  useEffect(() => {
     if (room) {
       console.log('Room participants with avatars:', room.participants.map(p => ({
         name: p.name,
         hasAvatar: !!p.avatarUrl,
         avatarUrl: p.avatarUrl
       })));
+      
+      // Update current story when room changes
+      if (room.currentStory) {
+        console.log('[RoomPage] Current story found:', room.currentStory);
+        setCurrentStory(room.currentStory);
+        setVotes(room.currentStory.votes || []);
+        setAreVotesRevealed(room.currentStory.isRevealed || false);
+        // Set voting active if there's a story and votes aren't revealed
+        setIsVotingActive(!room.currentStory.isRevealed);
+        console.log('[RoomPage] Voting active:', !room.currentStory.isRevealed);
+      } else {
+        console.log('[RoomPage] No current story');
+        setCurrentStory(undefined);
+        setVotes([]);
+        setIsVotingActive(false);
+        setAreVotesRevealed(false);
+      }
     }
   }, [room]);
+
+  // Socket handlers for story events
+  useEffect(() => {
+    if (!socket || !roomId) return;
+
+    const handleVotingStarted = (story: Story) => {
+      console.log('[RoomPage] Voting started for story:', story);
+      setCurrentStory(story);
+      setVotes([]);
+      setIsVotingActive(true);
+      setAreVotesRevealed(false);
+      toast.success('Voting started!');
+    };
+
+    const handleVoteSubmitted = (updatedStory: Story) => {
+      console.log('[RoomPage] Vote submitted, updated story:', updatedStory);
+      setVotes(updatedStory.votes);
+    };
+
+    const handleVotesRevealed = (story: Story) => {
+      console.log('[RoomPage] Votes revealed:', story);
+      setVotes(story.votes);
+      setAreVotesRevealed(true);
+      toast.success('Votes revealed!');
+    };
+
+    const handleVotesCleared = (story: Story) => {
+      console.log('[RoomPage] Votes cleared:', story);
+      setVotes([]);
+      setAreVotesRevealed(false);
+      setIsVotingActive(true);
+      toast.success('Votes cleared');
+    };
+
+    const handleStoryUpdated = (story: Story) => {
+      console.log('[RoomPage] Story updated:', story);
+      setCurrentStory(story);
+    };
+
+    const handleFinalEstimateSet = (story: Story) => {
+      console.log('[RoomPage] Final estimate set:', story);
+      setCurrentStory(story);
+      toast.success(`Final estimate set: ${story.finalEstimate}`);
+    };
+
+    socket.on(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
+    socket.on(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
+    socket.on(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
+    socket.on(SOCKET_EVENTS.VOTES_CLEARED, handleVotesCleared);
+    socket.on(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
+    socket.on(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
+
+    return () => {
+      socket.off(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
+      socket.off(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
+      socket.off(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
+      socket.off(SOCKET_EVENTS.VOTES_CLEARED, handleVotesCleared);
+      socket.off(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
+      socket.off(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
+    };
+  }, [socket, roomId]);
 
   const isOwner = room && currentUser && room.ownerId === currentUser.id;
 
@@ -56,6 +146,62 @@ const RoomPage: React.FC = () => {
     }
   };
 
+  // Story handlers
+  const handleStartVoting = async (story: Story) => {
+    if (!socket || !roomId) return;
+    
+    try {
+      // Create story via API
+      const createdStory = await apiClient.createStory({
+        title: story.title,
+        description: story.description,
+        roomId
+      });
+      
+      // Start voting via socket
+      socket.emit(SOCKET_EVENTS.VOTING_STARTED, roomId, createdStory.id);
+    } catch (error) {
+      console.error('Failed to start voting:', error);
+      toast.error('Failed to start voting');
+    }
+  };
+
+  const handleRevealVotes = () => {
+    if (!socket || !currentStory) return;
+    socket.emit(SOCKET_EVENTS.VOTES_REVEALED, currentStory.id);
+  };
+
+  const handleClearVotes = () => {
+    if (!socket || !currentStory) return;
+    socket.emit(SOCKET_EVENTS.VOTES_CLEARED, currentStory.id);
+  };
+
+  const handleUpdateStory = async (storyUpdate: Partial<Story>) => {
+    if (!currentStory) return;
+    
+    try {
+      await apiClient.updateStory(currentStory.id, storyUpdate);
+      if (socket) {
+        socket.emit(SOCKET_EVENTS.STORY_UPDATED, currentStory.id);
+      }
+    } catch (error) {
+      console.error('Failed to update story:', error);
+      toast.error('Failed to update story');
+    }
+  };
+
+  const handleVote = (value: string) => {
+    if (!socket || !currentStory || !currentUser) return;
+    
+    const vote: Vote = {
+      userId: currentUser.id,
+      value,
+      submittedAt: new Date()
+    };
+    
+    socket.emit(SOCKET_EVENTS.VOTE_SUBMITTED, currentStory.id, vote);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -84,10 +230,11 @@ const RoomPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Header Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
             <div className="flex-1">
               {isEditingName ? (
                 <div className="flex items-center gap-2">
@@ -95,7 +242,7 @@ const RoomPage: React.FC = () => {
                     type="text"
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
-                    className="text-2xl font-bold border-b-2 border-blue-500 focus:outline-none px-2 py-1"
+                    className="text-2xl font-bold border-b-2 border-blue-500 focus:outline-none px-2 py-1 w-full md:w-auto"
                     autoFocus
                     disabled={isSaving}
                     onKeyDown={(e) => {
@@ -106,7 +253,7 @@ const RoomPage: React.FC = () => {
                   <button
                     onClick={handleSaveRoomName}
                     disabled={isSaving}
-                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg disabled:opacity-50"
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg disabled:opacity-50 transition-colors"
                     title="Save"
                   >
                     <Check className="w-5 h-5" />
@@ -114,7 +261,7 @@ const RoomPage: React.FC = () => {
                   <button
                     onClick={handleCancelEdit}
                     disabled={isSaving}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50 transition-colors"
                     title="Cancel"
                   >
                     <X className="w-5 h-5" />
@@ -134,11 +281,11 @@ const RoomPage: React.FC = () => {
                   )}
                 </div>
               )}
-              <p className="text-gray-600 mt-1">Room ID: {room.id}</p>
+              <p className="text-slate-600 text-sm mt-2">Room ID: <span className="font-mono font-semibold">{room.id}</span></p>
             </div>
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
             >
               <Home className="w-4 h-4" />
               Leave Room
@@ -146,15 +293,47 @@ const RoomPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Participants</h2>
-            <span className="text-sm text-gray-600">{room.participants.length} {room.participants.length === 1 ? 'person' : 'people'}</span>
+        {/* Main 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column - Story & Voting (8 columns) */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Story Controls */}
+            <StoryControls
+              currentStory={currentStory}
+              isVotingActive={isVotingActive}
+              areVotesRevealed={areVotesRevealed}
+              canRevealVotes={votes.length > 0 && !areVotesRevealed}
+              isRoomOwner={isOwner || false}
+              onStartVoting={handleStartVoting}
+              onRevealVotes={handleRevealVotes}
+              onClearVotes={handleClearVotes}
+              onUpdateStory={handleUpdateStory}
+            />
+            
+            {/* Voting Results */}
+            {areVotesRevealed && votes.length > 0 && (
+              <VotingResults
+                votes={votes}
+                participants={room.participants}
+                isRevealed={areVotesRevealed}
+              />
+            )}
           </div>
-          
-          {/* Avatar Group */}
-          <div className="flex flex-wrap gap-3">
-            {room.participants.map((participant) => {
+
+          {/* Right Column - Participants & Voting Panel (4 columns) */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Participants Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-900">Team</h2>
+                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                  {room.participants.length} {room.participants.length === 1 ? 'person' : 'people'}
+                </span>
+              </div>
+              
+              {/* Avatar Group */}
+              <div className="flex flex-wrap gap-3">
+                {room.participants.map((participant) => {
               const isCurrentUser = participant.id === currentUser?.id;
               const isOwner = participant.id === room.ownerId;
               
@@ -221,6 +400,25 @@ const RoomPage: React.FC = () => {
                 </div>
               );
             })}
+              </div>
+            </div>
+
+            {/* Voting Panel */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              {currentStory ? (
+                <VotingPanel
+                  selectedDeck="fibonacci"
+                  currentVote={votes.find(v => v.userId === currentUser?.id)?.value || null}
+                  hasVoted={votes.some(v => v.userId === currentUser?.id)}
+                  isVotingActive={isVotingActive && !areVotesRevealed}
+                  onVote={handleVote}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-slate-500 text-sm">Waiting for story...</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
