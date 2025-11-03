@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Room } from '@planning-poker/shared';
 import { apiClient } from '../services/apiClient';
-import { Briefcase, Users, Clock, ChevronRight, Loader, Home, Plus, Trash2, X, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Users, Clock, ChevronRight, Loader, Trash2, X, AlertTriangle, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyRoomsPage: React.FC = () => {
@@ -142,16 +142,7 @@ const MyRoomsPage: React.FC = () => {
       <div className="page-container">
         <div className="page-content">
           <div className="card p-8">
-            <p className="text-red-600 text-center mb-4">{error}</p>
-            <div className="text-center">
-              <button
-                onClick={() => navigate('/')}
-                className="btn-secondary inline-flex items-center gap-2"
-              >
-                <Home className="w-4 h-4" />
-                Back to Home
-              </button>
-            </div>
+            <p className="text-red-600 text-center">{error}</p>
           </div>
         </div>
       </div>
@@ -161,64 +152,21 @@ const MyRoomsPage: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page-content">
-        {/* Header */}
-        <div className="page-header animate-slide-up">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-6 shadow-lg shadow-primary-500/25">
-            <Briefcase className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="page-title">My Rooms</h1>
-          <p className="page-subtitle">
-            {rooms.length > 0 
-              ? `You own ${rooms.length} ${rooms.length === 1 ? 'room' : 'rooms'}. Click on any room to rejoin.`
-              : 'Create your first room to start planning with your team'
-            }
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-4 mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <button
-            onClick={() => navigate('/')}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <Home className="w-4 h-4" />
-            Back to Home
-          </button>
-          <button
-            onClick={() => navigate('/')}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Create New Room
-          </button>
-        </div>
-
         {/* Rooms Grid */}
         {rooms.length === 0 ? (
-          <div className="card p-12 text-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-100 rounded-full mb-6">
-              <Briefcase className="w-10 h-10 text-slate-400" />
-            </div>
+          <div className="card p-12 text-center">
             <h3 className="text-2xl font-semibold text-slate-900 mb-3">No rooms yet</h3>
-            <p className="text-slate-600 mb-6 max-w-md mx-auto">
-              You haven't created any rooms yet. Create your first room to start planning poker sessions with your team.
+            <p className="text-slate-600">
+              You haven't created any rooms yet.
             </p>
-            <button
-              onClick={() => navigate('/')}
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create Your First Room
-            </button>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            {rooms.map((room, index) => (
-              <div
-                key={room.id}
-                className="card p-6 group hover:scale-102 hover:shadow-xl transition-all duration-200 animate-slide-up relative"
-                style={{ animationDelay: `${0.3 + index * 0.05}s` }}
-              >
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {rooms.map((room) => (
+            <div
+              key={room.id}
+              className="card p-6 group hover:scale-102 hover:shadow-xl transition-all duration-200 relative"
+            >
                 {/* Action buttons */}
                 <div className="absolute top-4 right-4 flex gap-2 z-10">
                   <button
@@ -298,9 +246,9 @@ const MyRoomsPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
         )}
 
         {/* Delete Confirmation Modal */}
