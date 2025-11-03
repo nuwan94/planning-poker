@@ -57,27 +57,29 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
   };
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">
+    <div className="space-y-6">
+      {/* Room Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="space-y-3">
+          <h2 className="text-2xl font-bold text-slate-900">
             {room.name}
           </h2>
-          <div className="flex items-center bg-indigo-50 rounded-lg px-3 py-2">
-            <span className="text-indigo-700 text-sm font-medium mr-2">Room ID:</span>
-            <p className="text-indigo-800 text-lg font-mono font-bold">
+          <div className="inline-flex items-center bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl px-4 py-2 border border-primary-200">
+            <span className="text-primary-700 text-sm font-medium mr-2">Room ID:</span>
+            <p className="text-primary-800 text-lg font-mono font-bold">
               {room.id}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={copyRoomUrl}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg border border-gray-200 transition-all duration-200 hover:shadow-md flex items-center gap-2"
+            className={`btn-secondary btn-sm transition-all duration-200 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : ''}`}
             title="Copy room URL"
           >
             {copied ? (
-              <Check className="w-4 h-4 text-green-600" />
+              <Check className="w-4 h-4 text-emerald-600" />
             ) : (
               <Copy className="w-4 h-4" />
             )}
@@ -85,7 +87,7 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
           </button>
           <button
             onClick={shareRoom}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:shadow-md flex items-center gap-2"
+            className="btn-primary btn-sm"
             title="Share room"
           >
             <Share2 className="w-4 h-4" />
@@ -95,62 +97,69 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
       </div>
 
       {/* Room Statistics */}
-      <div className="grid grid-cols-3 gap-4 py-4 border-t border-gray-100">
-        <div className="text-center bg-blue-50 rounded-lg p-4">
-          <div className="flex items-center justify-center mb-2">
-            <Users className="w-5 h-5 text-blue-600 mr-2" />
-            <span className="text-2xl font-bold text-blue-800">
-              {room.participants.length}
-            </span>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card p-6 text-center group hover:scale-105 transition-transform duration-200">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-200">
+            <Users className="w-6 h-6 text-white" />
           </div>
-          <p className="text-sm font-medium text-blue-700">Participants</p>
+          <div className="text-3xl font-bold text-slate-900 mb-1">
+            {room.participants.length}
+          </div>
+          <p className="text-sm font-medium text-slate-600">Participants</p>
         </div>
         
-        <div className="text-center bg-purple-50 rounded-lg p-4">
-          <div className="flex items-center justify-center mb-2">
-            <UserPlus className="w-5 h-5 text-purple-600 mr-2" />
-            <span className="text-2xl font-bold text-purple-800">
-              {room.currentStory ? 1 : 0}
-            </span>
+        <div className="card p-6 text-center group hover:scale-105 transition-transform duration-200">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-200">
+            <UserPlus className="w-6 h-6 text-white" />
           </div>
-          <p className="text-sm font-medium text-purple-700">Stories</p>
+          <div className="text-3xl font-bold text-slate-900 mb-1">
+            {room.currentStory ? 1 : 0}
+          </div>
+          <p className="text-sm font-medium text-slate-600">Active Stories</p>
         </div>
         
-        <div className="text-center bg-green-50 rounded-lg p-4">
-          <div className="flex items-center justify-center mb-2">
-            <Clock className="w-5 h-5 text-green-600 mr-2" />
+        <div className="card p-6 text-center group hover:scale-105 transition-transform duration-200">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl mb-3 group-hover:scale-110 transition-transform duration-200">
+            <Clock className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <p className="text-xs font-medium text-green-800">
-              {formatDate(room.createdAt.toString())}
-            </p>
-            <p className="text-sm font-medium text-green-700 mt-1">Created</p>
+          <div className="text-xs font-medium text-slate-700 mb-1">
+            {formatDate(room.createdAt.toString())}
           </div>
+          <p className="text-sm font-medium text-slate-600">Created</p>
         </div>
       </div>
 
-      {/* Current Story Indicator */}
+      {/* Current Story Status */}
       {room.currentStory && (
-        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
-          <p className="text-blue-800 font-medium flex items-center">
-            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="font-semibold">Current Story:</span>{' '}
-            <span className="ml-1">{room.currentStory.title}</span>
-          </p>
+        <div className="card-elevated p-6 bg-gradient-to-r from-primary-50 to-primary-100 border-primary-200">
+          <div className="flex items-center">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl mr-4">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-primary-900 font-semibold text-lg">Current Story</p>
+              <p className="text-primary-800 text-sm mt-1">{room.currentStory.title}</p>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Voting Status */}
       {room.isVotingActive && (
-        <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
-          <p className="text-green-800 font-medium text-center flex items-center justify-center">
-            <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Voting is currently active
-          </p>
+        <div className="card-elevated p-6 bg-gradient-to-r from-emerald-50 to-emerald-100 border-emerald-200">
+          <div className="flex items-center justify-center">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl mr-4">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-emerald-900 font-semibold text-lg">Voting Active</p>
+              <p className="text-emerald-800 text-sm mt-1">Team members are currently voting</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

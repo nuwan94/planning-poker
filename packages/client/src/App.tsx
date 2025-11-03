@@ -7,21 +7,22 @@ import RoomPage from './pages/RoomPage';
 import NotFoundPage from './pages/NotFoundPage';
 import Layout from './components/Layout';
 import { SocketProvider } from './contexts/SocketContext';
+import Auth0ProviderWithConfig from './auth/Auth0ProviderWithConfig';
 
 const App: React.FC = () => {
   return (
-    <SocketProvider>
-      <Layout>
-        <div className="max-w-6xl mx-auto px-4 py-8">
+    <Auth0ProviderWithConfig>
+      <SocketProvider>
+        <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/create-room" element={<CreateRoomPage />} />
             <Route path="/room/:id" element={<RoomPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </div>
-      </Layout>
-    </SocketProvider>
+        </Layout>
+      </SocketProvider>
+    </Auth0ProviderWithConfig>
   );
 };
 

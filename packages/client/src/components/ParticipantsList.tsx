@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Vote } from '@planning-poker/shared';
-import { Users, Eye, EyeOff } from 'lucide-react';
+import { Users, Eye } from 'lucide-react';
 
 interface ParticipantsListProps {
   participants: User[];
@@ -32,40 +32,20 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
     }
   };
 
-  const getStatusIcon = (status: string | null) => {
-    switch (status) {
-      case 'revealed':
-        return <Eye className="w-4 h-4 text-green-600" />;
-      case 'voted':
-        return <div className="w-2 h-2 bg-green-500 rounded-full"></div>;
-      case 'waiting':
-        return <div className="w-2 h-2 bg-gray-300 rounded-full animate-pulse"></div>;
-      default:
-        return <EyeOff className="w-4 h-4 text-gray-400" />;
-    }
-  };
 
-  const getStatusColor = (status: string | null, isCurrentUser: boolean) => {
-    if (isCurrentUser) return 'border-primary-500 bg-primary-50';
-    
-    switch (status) {
-      case 'revealed':
-      case 'voted':
-        return 'border-green-200 bg-green-50';
-      case 'waiting':
-        return 'border-yellow-200 bg-yellow-50';
-      default:
-        return 'border-gray-200 bg-white';
-    }
-  };
 
   return (
-    <div className="card p-6">
-      <div className="flex items-center mb-4">
-        <Users className="w-5 h-5 text-gray-600 mr-2" />
-        <h3 className="text-lg font-semibold text-gray-800">
-          Participants ({participants.length})
-        </h3>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl">
+          <Users className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold text-slate-900">
+            Team Members
+          </h3>
+          <p className="text-sm text-slate-600">{participants.length} participants</p>
+        </div>
       </div>
       
       <div className="space-y-3">
@@ -76,34 +56,63 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
           return (
             <div
               key={participant.id}
-              className={`flex items-center justify-between p-3 rounded-lg border-2 transition-colors ${getStatusColor(voteStatus?.status || null, isCurrentUser)}`}
+              className="card p-4 hover:shadow-md transition-all duration-200"
             >
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white text-sm font-semibold mr-3">
-                  {participant.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-800">
-                    {participant.name}
-                    {isCurrentUser && (
-                      <span className="ml-2 text-xs text-primary-600 font-medium">
-                        (You)
-                      </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="avatar-md">
+                    {participant.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-900">
+                        {participant.name}
+                      </p>
+                      {isCurrentUser && (
+                        <span className="status-badge bg-primary-100 text-primary-800 px-2 py-0.5 text-xs">
+                          You
+                        </span>
+                      )}
+                    </div>
+                    {participant.isSpectator && (
+                      <p className="text-xs text-slate-500 mt-0.5">Spectator</p>
                     )}
-                  </p>
-                  {participant.isSpectator && (
-                    <p className="text-xs text-gray-500">Spectator</p>
-                  )}
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center">
-                {voteStatus?.status === 'revealed' && voteStatus.value && (
-                  <span className="mr-2 px-2 py-1 bg-white rounded text-sm font-bold border">
-                    {voteStatus.value}
-                  </span>
-                )}
-                {getStatusIcon(voteStatus?.status || null)}
+                
+                <div className="flex items-center gap-3">
+                  {voteStatus?.status === 'revealed' && voteStatus.value && (
+                    <div className="planning-poker-card w-8 h-12 flex items-center justify-center text-sm font-bold">
+                      {voteStatus.value}
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    {voteStatus?.status === 'revealed' && (
+                      <div className="status-revealed">
+                        <Eye className="w-4 h-4" />
+                        Revealed
+                      </div>
+                    )}
+                    {voteStatus?.status === 'voted' && (
+                      <div className="status-online">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        Voted
+                      </div>
+                    )}
+                    {voteStatus?.status === 'waiting' && (
+                      <div className="status-voting">
+                        <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                        Waiting
+                      </div>
+                    )}
+                    {!voteStatus?.status && !isVotingActive && (
+                      <div className="flex items-center gap-1.5 text-slate-500 text-sm">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                        Ready
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           );
@@ -111,20 +120,27 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
       </div>
       
       {isVotingActive && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">
-              Voted: {votes.length} / {participants.filter(p => !p.isSpectator).length}
+        <div className="card p-4 bg-gradient-to-r from-slate-50 to-slate-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"></div>
+              <span className="font-medium text-slate-700">
+                Voting Progress
+              </span>
+            </div>
+            <span className="font-semibold text-slate-900">
+              {votes.length} / {participants.filter(p => !p.isSpectator).length}
             </span>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                <span className="text-gray-600">Voted</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-gray-300 rounded-full mr-1"></div>
-                <span className="text-gray-600">Waiting</span>
-              </div>
+          </div>
+          
+          <div className="mt-3 flex items-center justify-center space-x-6 text-sm">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+              <span className="text-slate-600">Voted</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+              <span className="text-slate-600">Waiting</span>
             </div>
           </div>
         </div>

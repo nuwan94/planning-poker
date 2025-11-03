@@ -32,8 +32,10 @@ export const createRoomValidation = [
 
 export const updateRoomValidation = [
   param('id')
-    .isUUID()
-    .withMessage('Invalid room ID format'),
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Room ID must be 6 characters')
+    .matches(/^[A-Z0-9]+$/)
+    .withMessage('Room ID must contain only uppercase letters and numbers'),
   body('name')
     .optional()
     .trim()
@@ -51,8 +53,10 @@ export const updateRoomValidation = [
 
 export const roomIdValidation = [
   param('id')
-    .isUUID()
-    .withMessage('Invalid room ID format'),
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Room ID must be 6 characters')
+    .matches(/^[A-Z0-9]+$/)
+    .withMessage('Room ID must contain only uppercase letters and numbers'),
   handleValidationErrors
 ];
 
@@ -79,8 +83,10 @@ export const createStoryValidation = [
     .isLength({ max: 500 })
     .withMessage('Each acceptance criteria must not exceed 500 characters'),
   body('roomId')
-    .isUUID()
-    .withMessage('Invalid room ID format'),
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Room ID must be 6 characters')
+    .matches(/^[A-Z0-9]+$/)
+    .withMessage('Room ID must contain only uppercase letters and numbers'),
   handleValidationErrors
 ];
 

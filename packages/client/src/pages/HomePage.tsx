@@ -1,200 +1,94 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Users, Clock, ArrowRight } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { Room } from '@planning-poker/shared';
-import { apiClient } from '../services/apiClient';
-import { generateId } from '@planning-poker/shared';
+import React, { useState } from 'react';
+import { Plus, Users, Clock, Zap, Users2, Vote } from 'lucide-react';
+import CreateRoomModal from '../components/CreateRoomModal';
+import JoinRoomModal from '../components/JoinRoomModal';
 
 const HomePage: React.FC = () => {
-  const navigate = useNavigate();
-
-  const [userName, setUserName] = useState('');
-  const [joinRoomId, setJoinRoomId] = useState('');
-
-  const handleCreateRoom = () => {
-    if (!userName.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-
-    // Store user name in localStorage
-    localStorage.setItem('planningPokerUser', JSON.stringify({
-      name: userName.trim(),
-      id: generateId()
-    }));
-    
-    // Navigate to create room page
-    navigate('/create-room');
-  };
-
-  const handleJoinRoom = () => {
-    if (!joinRoomId.trim()) {
-      toast.error('Please enter a room ID');
-      return;
-    }
-    if (!userName.trim()) {
-      toast.error('Please enter your name');
-      return;
-    }
-
-    // Store user name in localStorage for the room
-    localStorage.setItem('planningPokerUser', JSON.stringify({
-      name: userName.trim(),
-      id: generateId()
-    }));
-    
-    navigate(`/room/${joinRoomId.trim()}`);
-  };
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold text-primary-700 mb-4">
-          🎯 Planning Poker
-        </h1>
-        <h2 className="text-2xl text-gray-600 mb-4">
-          Estimate your stories with your team in real-time
-        </h2>
-        <p className="text-lg text-gray-500">
-          A collaborative tool for agile estimation using story points
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-8 mb-12">
-        {/* Create Room Card */}
-        <div className="card p-8 h-full">
-          <div className="flex items-center mb-6">
-            <Plus className="text-primary-600 mr-3" size={28} />
-            <h3 className="text-2xl font-bold text-gray-800">
-              Create New Room
-            </h3>
+    <div className="page-container">
+      <div className="page-content">
+        {/* Hero Section */}
+        <div className="page-header animate-slide-up">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-8 shadow-lg shadow-primary-500/25">
+            <Vote className="w-10 h-10 text-white" />
           </div>
-          
-          <form className="space-y-6">
-            <div>
-              <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Name
-              </label>
-              <input
-                id="userName"
-                type="text"
-                className="input-field"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Enter your name"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCreateRoom}
-              className="btn-primary w-full flex items-center justify-center py-3"
-            >
-              <Plus className="mr-2" size={20} />
-              Create Room
-            </button>
-          </form>
+          <h1 className="page-title">
+            Planning Poker
+          </h1>
+          <p className="page-subtitle">
+            Estimate user stories with your team in real-time. Create or join a room to get started with collaborative planning sessions.
+          </p>
         </div>
 
-        {/* Join Room Card */}
-        <div className="card p-8 h-full">
-          <div className="flex items-center mb-6">
-            <Users className="text-primary-600 mr-3" size={28} />
-            <h3 className="text-2xl font-bold text-gray-800">
-              Join Existing Room
-            </h3>
+        {/* Features Section */}
+        <div className="grid md:grid-cols-3 gap-6 mb-16 animate-slide-up">
+          <div className="card p-6 text-center group hover:scale-105 transition-transform duration-200">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Real-time Voting</h3>
+            <p className="text-slate-600 text-sm">Vote on user stories simultaneously with your team members and see results instantly.</p>
           </div>
-          
-          <form className="space-y-6">
-            <div>
-              <label htmlFor="userNameJoin" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Name
-              </label>
-              <input
-                id="userNameJoin"
-                type="text"
-                className="input-field"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Enter your name"
-              />
-            </div>
-            <div>
-              <label htmlFor="roomId" className="block text-sm font-medium text-gray-700 mb-2">
-                Room ID
-              </label>
-              <input
-                id="roomId"
-                type="text"
-                className="input-field"
-                value={joinRoomId}
-                onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
-                placeholder="Enter room ID (e.g., A3B9K2)"
-                maxLength={6}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleJoinRoom}
-              className="btn-secondary w-full flex items-center justify-center py-3"
-            >
-              <Users className="mr-2" size={20} />
-              Join Room
-            </button>
-          </form>
-        </div>
-      </div>
 
-      {/* Card Preview Section */}
-      <div className="bg-white rounded-xl p-8 mb-8 border border-gray-200">
-        <h3 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Planning Poker Cards Preview
-        </h3>
-        <div className="flex justify-center items-center space-x-4 mb-8">
-          {['1', '2', '3', '5', '8', '13', '?', '☕'].map((value, index) => (
-            <div
-              key={value}
-              className={`planning-poker-card w-16 h-24 flex items-center justify-center text-xl font-bold ${
-                index === 2 ? 'selected' : ''
-              }`}
-            >
-              {value}
+          <div className="card p-6 text-center group hover:scale-105 transition-transform duration-200">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+              <Users2 className="w-6 h-6 text-white" />
             </div>
-          ))}
-        </div>
-        <p className="text-center text-gray-600">
-          Click on a card to select your estimate
-        </p>
-      </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Team Collaboration</h3>
+            <p className="text-slate-600 text-sm">Work together with unlimited participants in a shared planning environment.</p>
+          </div>
 
-      {/* Features Section */}
-      <div className="bg-gray-100 rounded-xl p-8">
-        <h3 className="text-2xl font-bold text-center text-gray-800 mb-2">
-          Features
-        </h3>
-        <div className="w-24 h-0.5 bg-primary-600 mx-auto mb-8"></div>
-        <div className="grid sm:grid-cols-3 gap-8">
-          <div className="text-center">
-            <h4 className="text-xl font-semibold text-gray-800 mb-2">🎯 Real-time Voting</h4>
-            <p className="text-gray-600">
-              Vote on stories simultaneously with your team members
+          <div className="card p-6 text-center group hover:scale-105 transition-transform duration-200">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Quick Setup</h3>
+            <p className="text-slate-600 text-sm">Get started in seconds. No registration required, just enter your name and start estimating.</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="text-center mb-16 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="card-elevated p-8 max-w-2xl mx-auto">
+            <h3 className="text-2xl font-bold text-slate-900 mb-6">Ready to Get Started?</h3>
+            <p className="text-slate-600 mb-8">
+              Choose an option below to begin your planning poker session.
             </p>
-          </div>
-          <div className="text-center">
-            <h4 className="text-xl font-semibold text-gray-800 mb-2">📊 Multiple Card Decks</h4>
-            <p className="text-gray-600">
-              Choose from Fibonacci, T-shirt sizes, and custom decks
-            </p>
-          </div>
-          <div className="text-center">
-            <h4 className="text-xl font-semibold text-gray-800 mb-2">👥 Team Collaboration</h4>
-            <p className="text-gray-600">
-              See who has voted and reveal results together
-            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-primary px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-3 group"
+              >
+                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
+                Create New Room
+              </button>
+              <button
+                onClick={() => setShowJoinModal(true)}
+                className="btn-secondary px-8 py-4 text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 group"
+              >
+                <Users className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                Join Existing Room
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Modals */}
+        {showCreateModal && (
+          <CreateRoomModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+          />
+        )}
+        {showJoinModal && (
+          <JoinRoomModal
+            isOpen={showJoinModal}
+            onClose={() => setShowJoinModal(false)}
+          />
+        )}
       </div>
     </div>
   );

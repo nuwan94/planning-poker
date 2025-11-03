@@ -63,92 +63,97 @@ const CreateRoomPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-            <Users className="h-6 w-6 text-blue-600" />
+    <div className="page-container">
+      <div className="max-w-2xl mx-auto px-4 py-16">
+        <div className="text-center mb-12 animate-slide-up">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-6 shadow-lg shadow-primary-500/25">
+            <Users className="w-8 h-8 text-white" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h1 className="text-4xl font-bold text-slate-900 mb-4">
             Create Planning Room
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Set up a new planning poker session for your team
+          </h1>
+          <p className="text-lg text-slate-600 max-w-lg mx-auto">
+            Set up a new planning poker session for your team and start estimating user stories together.
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Room Name *
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Sprint Planning - Q4 2024"
-                maxLength={100}
-                disabled={isLoading}
-              />
+        <div className="card-elevated p-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <form className="space-y-8" onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              <div className="form-group">
+                <label htmlFor="name" className="label">
+                  Room Name *
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="input"
+                  placeholder="Sprint Planning - Q4 2024"
+                  maxLength={100}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="description" className="label">
+                  Description (Optional)
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={4}
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  className="input resize-none"
+                  placeholder="Estimate user stories for the upcoming sprint..."
+                  maxLength={500}
+                  disabled={isLoading}
+                />
+                <div className="text-xs text-slate-500 mt-1">
+                  {formData.description.length}/500 characters
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                Description (Optional)
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                rows={3}
-                value={formData.description}
-                onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Estimate user stories for the upcoming sprint..."
-                maxLength={500}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
                 disabled={isLoading}
-              />
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              
+              <button
+                type="submit"
+                disabled={isLoading || !formData.name.trim()}
+                className="btn-primary flex-1"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating Room...
+                  </>
+                ) : (
+                  <>
+                    Create Room
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
             </div>
-          </div>
+          </form>
 
-          <div className="flex space-x-4">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              disabled={isLoading}
-              className="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            
-            <button
-              type="submit"
-              disabled={isLoading || !formData.name.trim()}
-              className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                  Creating Room...
-                </>
-              ) : (
-                <>
-                  Create Room
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </button>
+          <div className="text-center mt-6">
+            <p className="text-sm text-slate-500">
+              Once created, you can share the room link with your team members to start collaborative estimation.
+            </p>
           </div>
-        </form>
-
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            Once created, you can share the room link with your team members
-          </p>
         </div>
       </div>
     </div>
