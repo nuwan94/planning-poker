@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
 
 const UserAvatarDropdown: React.FC = () => {
   const { user, isLoading, isAuthenticated, logout } = useAuth0();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -110,7 +112,7 @@ const UserAvatarDropdown: React.FC = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                // Add settings functionality here
+                navigate('/settings');
               }}
               className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center space-x-3 transition-colors duration-150"
             >
