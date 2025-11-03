@@ -1,11 +1,28 @@
-import React, { useState } from 'react';
-import { Plus, Users, Clock, Zap, Users2, Vote } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Users, Clock, Zap, Users2, Vote, Briefcase } from 'lucide-react';
 import CreateRoomModal from '../components/CreateRoomModal';
 import JoinRoomModal from '../components/JoinRoomModal';
 
 const HomePage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Get current user from localStorage
+    const savedUser = localStorage.getItem('planningPokerUser');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      setCurrentUserId(userData.id);
+    }
+  }, []);
+
+  const handleModalClose = () => {
+    setShowCreateModal(false);
+    setShowJoinModal(false);
+  };
 
   return (
     <div className="page-container">
@@ -50,6 +67,28 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
+        {/* My Rooms Link - Show if user has logged in */}
+        {currentUserId && (
+          <div className="mb-16 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <div className="card p-8 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
+                <Briefcase className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">View Your Rooms</h3>
+              <p className="text-slate-600 mb-6">
+                Access all the planning poker rooms you've created
+              </p>
+              <button
+                onClick={() => navigate('/my-rooms')}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <Briefcase className="w-4 h-4" />
+                Go to My Rooms
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="text-center mb-16 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <div className="card-elevated p-8 max-w-2xl mx-auto">
@@ -80,13 +119,13 @@ const HomePage: React.FC = () => {
         {showCreateModal && (
           <CreateRoomModal
             isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
+            onClose={handleModalClose}
           />
         )}
         {showJoinModal && (
           <JoinRoomModal
             isOpen={showJoinModal}
-            onClose={() => setShowJoinModal(false)}
+            onClose={handleModalClose}
           />
         )}
       </div>

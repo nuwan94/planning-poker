@@ -69,6 +69,13 @@ export class RoomService {
     return Promise.all(rooms.map(room => this.populateRoom(room)));
   }
 
+  async getRoomsByOwner(ownerId: string): Promise<IRoom[]> {
+    console.log(`[RoomService] Getting rooms for owner: ${ownerId}`);
+    const rooms = await Room.find({ ownerId }).sort({ createdAt: -1 });
+    console.log(`[RoomService] Found ${rooms.length} rooms for owner ${ownerId}`);
+    return Promise.all(rooms.map(room => this.populateRoom(room)));
+  }
+
   async updateRoom(roomId: string, updates: Partial<Pick<IRoom, 'name' | 'description' | 'cardDeckId'>>): Promise<IRoom | null> {
     const room = await Room.findOneAndUpdate(
       { id: roomId },

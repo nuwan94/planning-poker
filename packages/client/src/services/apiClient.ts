@@ -46,6 +46,11 @@ class ApiClient {
     return response.data || [];
   }
 
+  async getRoomsByOwner(ownerId: string): Promise<Room[]> {
+    const response = await this.request<Room[]>(`/api/rooms/owner/${ownerId}`);
+    return response.data || [];
+  }
+
   async getRoom(roomId: string): Promise<Room | null> {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🌐 API: Getting room');

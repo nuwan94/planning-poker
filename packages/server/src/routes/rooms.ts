@@ -35,6 +35,28 @@ router.get('/', async (req: Request, res: Response<ApiResponse<Room[]>>) => {
   }
 });
 
+// Get rooms owned by a user
+router.get('/owner/:ownerId', async (req: Request, res: Response<ApiResponse<Room[]>>) => {
+  const { ownerId } = req.params;
+  
+  try {
+    console.log(`[API] Getting rooms for owner: ${ownerId}`);
+    const rooms = await roomService.getRoomsByOwner(ownerId);
+    
+    console.log(`[API] Found ${rooms.length} rooms for owner ${ownerId}`);
+    res.json({
+      success: true,
+      data: rooms
+    });
+  } catch (error) {
+    console.error(`Error fetching rooms for owner ${ownerId}:`, error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch rooms'
+    });
+  }
+});
+
 // Get room by ID
 router.get('/:id', roomIdValidation, async (req: Request, res: Response<ApiResponse<Room>>) => {
   const { id } = req.params;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-import { Home, Plus, Users } from 'lucide-react';
+import { Home, Plus, Users, Briefcase } from 'lucide-react';
 import CreateRoomModal from './CreateRoomModal';
 import JoinRoomModal from './JoinRoomModal';
 import LoginButton from './LoginButton';
@@ -66,6 +66,16 @@ const Navbar: React.FC<NavbarProps> = ({ roomInfo, onLeaveRoom, onShowCreateModa
           <div className="flex items-center space-x-4">
             {/* Action buttons - always visible */}
             <div className="flex items-center space-x-3">
+              {location.pathname !== '/my-rooms' && (
+                <button
+                  onClick={() => navigate('/my-rooms')}
+                  className="btn-ghost px-4 py-2.5 font-medium transition-all duration-200"
+                  title="My Rooms"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">My Rooms</span>
+                </button>
+              )}
               <button
                 onClick={onShowCreateModal}
                 className="btn-primary px-4 py-2.5 font-medium shadow-md hover:shadow-lg transition-all duration-200"
