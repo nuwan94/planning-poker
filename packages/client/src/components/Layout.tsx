@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useCallback } from 'react';
 
 import NavbarWithModals from './Navbar';
 
@@ -36,13 +36,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return true;
   };
 
+  const handleSetRoomInfo = useCallback((newRoomInfo: RoomInfo | null) => {
+    setRoomInfo(newRoomInfo);
+  }, []);
+
+  const handleSetLeaveRoomHandler = useCallback((handler: (() => void) | null) => {
+    setLeaveRoomHandler(handler);
+  }, []);
+
   const contextValue: LayoutContextType = {
-    setRoomInfo: (newRoomInfo: RoomInfo | null) => {
-      setRoomInfo(newRoomInfo);
-    },
-    setLeaveRoomHandler: (handler: (() => void) | null) => {
-      setLeaveRoomHandler(handler);
-    }
+    setRoomInfo: handleSetRoomInfo,
+    setLeaveRoomHandler: handleSetLeaveRoomHandler
   };
 
   return (

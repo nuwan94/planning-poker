@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import { 
   Room, 
@@ -18,10 +18,16 @@ export const useRoom = (roomId: string) => {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [currentVote, setCurrentVote] = useState<string | null>(null);
+  const hasJoinedRef = useRef(false);
+  const initializingRef = useRef(false);
 
   // Initialize user and join room
   useEffect(() => {
-    if (!socket || !isConnected || !roomId) return;
+    console.log('useRoom effect: socket:', !!socket, 'isConnected:', isConnected, 'roomId:', roomId, 'hasJoined:', hasJoinedRef.current);
+    
+    if (!socket || !isConnected || !roomId || hasJoinedRef.current || initializingRef.current) {
+      return;
+    }
 
     // Get user from localStorage or create new one
     const savedUser = localStorage.getItem('planningPokerUser');
@@ -44,26 +50,40 @@ export const useRoom = (roomId: string) => {
     
     // First try to get room data from API
     const initializeRoom = async () => {
+      if (initializingRef.current) return;
+      initializingRef.current = true;
+
       try {
+        console.log('useRoom: Fetching room data...');
         const roomData = await apiClient.getRoom(roomId);
+        console.log('useRoom: Room data received:', roomData);
         if (roomData) {
           setRoom(roomData);
         }
         
         // Join the room via socket
+        console.log('useRoom: Emitting JOIN_ROOM event');
         socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user);
+        hasJoinedRef.current = true;
+        console.log('useRoom: Setting isLoading to false');
         setIsLoading(false);
       } catch (error) {
         console.error('Failed to initialize room:', error);
         setIsLoading(false);
+        toast.error('Failed to load room');
+      } finally {
+        initializingRef.current = false;
       }
     };
 
     initializeRoom();
 
     return () => {
-      if (socket && user) {
+      console.log('useRoom cleanup: hasJoined:', hasJoinedRef.current);
+      if (socket && user && hasJoinedRef.current) {
+        console.log('useRoom cleanup: Emitting LEAVE_ROOM');
         socket.emit(SOCKET_EVENTS.LEAVE_ROOM, roomId, user.id);
+        hasJoinedRef.current = false;
       }
     };
   }, [socket, isConnected, roomId]);
@@ -73,6 +93,7 @@ export const useRoom = (roomId: string) => {
     if (!socket) return;
 
     const handleRoomJoined = (joinedRoom: Room) => {
+      console.log('useRoom: ROOM_JOINED event received', joinedRoom);
       setRoom(joinedRoom);
       // Check if current user has voted in the current story
       if (joinedRoom.currentStory && currentUser) {
@@ -81,10 +102,14 @@ export const useRoom = (roomId: string) => {
         setCurrentVote(userVote?.value || null);
         setVotes(joinedRoom.currentStory.votes);
       }
-      toast.success('Joined room successfully');
+      // Only show toast if we haven't shown it before
+      if (hasJoinedRef.current) {
+        toast.success('Joined room successfully');
+      }
     };
 
     const handleRoomUpdated = (updatedRoom: Room) => {
+      console.log('useRoom: ROOM_UPDATED event received', updatedRoom);
       setRoom(updatedRoom);
       // Check if current user has voted in the current story
       if (updatedRoom.currentStory && currentUser) {

@@ -26,6 +26,10 @@ export class StoryService {
     return story.toJSON() as IStory;
   }
 
+  async getStoryDocument(storyId: string): Promise<IStoryDoc | null> {
+    return await Story.findOne({ id: storyId });
+  }
+
   async getStoriesByRoom(roomId: string): Promise<IStory[]> {
     const stories = await Story.find({ roomId }).sort({ createdAt: -1 });
     return stories.map(story => story.toJSON() as IStory);

@@ -30,13 +30,13 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
 
     try {
       // Store user data in localStorage for the session
-      if (user) {
-        localStorage.setItem('planningPokerUser', JSON.stringify({
-          name: user.name || user.email || 'Unknown User',
-          id: user.sub || generateId(),
-          email: user.email
-        }));
-      }
+      const userData = {
+        name: user?.name || user?.email || 'Unknown User',
+        id: user?.sub || generateId(),
+        email: user?.email
+      };
+      
+      localStorage.setItem('planningPokerUser', JSON.stringify(userData));
 
       // Create room directly with default name
       const owner = {

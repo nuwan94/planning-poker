@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../hooks/useRoom';
-import { generateId } from '@planning-poker/shared';
 import { useLayoutContext } from '../components/Layout';
 
 import RoomInfo from '../components/RoomInfo';
@@ -14,9 +13,6 @@ import { AlertCircle, Loader } from 'lucide-react';
 const RoomPage: React.FC = () => {
   const { id: roomId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
   
   // Try to get layout context, but don't fail if it's not available
   let setRoomInfo: ((roomInfo: any) => void) | null = null;
@@ -36,7 +32,6 @@ const RoomPage: React.FC = () => {
     votes,
     hasVoted,
     currentVote,
-
     actions
   } = useRoom(roomId || '');
 
@@ -75,102 +70,27 @@ const RoomPage: React.FC = () => {
         setLeaveRoomHandler(null);
       }
     };
-  }, [room, setRoomInfo, setLeaveRoomHandler, handleLeaveRoom]);
+  }, [room, handleLeaveRoom]);
 
+  // Redirect if no roomId
   useEffect(() => {
     if (!roomId) {
+      console.log('RoomPage: No roomId, redirecting to home');
       navigate('/');
-      return;
     }
+  }, [roomId, navigate]);
 
-    // Auto-join with stored user data if available
-    const storedUser = localStorage.getItem('planningPokerUser');
-    if (storedUser && !hasJoined) {
-      const userData = JSON.parse(storedUser);
-      setUserName(userData.name);
-      setHasJoined(true); // User data exists, so we can proceed
-    }
-  }, [roomId, navigate, hasJoined]);
-
-  const handleJoinRoom = async (name: string) => {
-    if (!name.trim() || !roomId) return;
-
-    setIsJoining(true);
-    try {
-      // Store user data in the same format as HomePage
-      const userData = {
-        name: name.trim(),
-        id: generateId()
-      };
-      localStorage.setItem('planningPokerUser', JSON.stringify(userData));
-      setHasJoined(true);
-    } catch (error) {
-      console.error('Failed to join room:', error);
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  // Show join form if user hasn't joined yet
-  if (!hasJoined && !isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="card p-8 w-full max-w-md">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            Join Planning Poker Room
-          </h1>
-          
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            handleJoinRoom(userName);
-          }}>
-            <div className="mb-6">
-              <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Name
-              </label>
-              <input
-                type="text"
-                id="userName"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                className="input w-full"
-                placeholder="Enter your name"
-                required
-                disabled={isJoining}
-              />
-            </div>
-            
-            <button
-              type="submit"
-              disabled={!userName.trim() || isJoining}
-              className="btn btn-primary w-full flex items-center justify-center gap-2"
-            >
-              {isJoining ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  Joining...
-                </>
-              ) : (
-                'Join Room'
-              )}
-            </button>
-          </form>
-          
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => navigate('/')}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              ← Back to Home
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  console.log('RoomPage: Current state -', { 
+    roomId, 
+    isLoading, 
+    hasRoom: !!room, 
+    hasCurrentUser: !!currentUser,
+    roomParticipants: room?.participants?.length 
+  });
 
   // Show loading state
   if (isLoading) {
+    console.log('RoomPage: Rendering loading screen');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -183,6 +103,7 @@ const RoomPage: React.FC = () => {
 
   // Show error state
   if (!room && !isLoading) {
+    console.log('RoomPage: No room and not loading, showing error');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="card p-8 text-center">
@@ -202,6 +123,7 @@ const RoomPage: React.FC = () => {
 
   // Show room not found
   if (!room) {
+    console.log('RoomPage: No room but still loading, showing room not found');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="card p-8 text-center">
@@ -222,6 +144,8 @@ const RoomPage: React.FC = () => {
   }
 
   const isOwner = currentUser?.id === room.ownerId;
+
+  console.log('RoomPage: Rendering room interface!', { room: room.name, owner: isOwner });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
