@@ -3,12 +3,12 @@ export const CARD_DECKS = {
   FIBONACCI: {
     id: 'fibonacci',
     name: 'Fibonacci',
-    values: ['0', '1', '2', '3', '5', '8', '13', '21', '34', '55', '89', '?', '☕']
+    values: ['0', '1', '2', '3', '5', '8', '13', '21', '?', '☕']
   },
   MODIFIED_FIBONACCI: {
     id: 'modified-fibonacci',
     name: 'Modified Fibonacci',
-    values: ['0', '0.5', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '☕']
+    values: ['0', '0.5', '1', '2', '3', '5', '8', '13', '20', '40', '?', '☕']
   },
   T_SHIRT: {
     id: 't-shirt',
@@ -18,7 +18,7 @@ export const CARD_DECKS = {
   POWERS_OF_2: {
     id: 'powers-of-2',
     name: 'Powers of 2',
-    values: ['0', '1', '2', '4', '8', '16', '32', '64', '?', '☕']
+    values: ['0', '1', '2', '4', '8', '16', '32', '?', '☕']
   }
 } as const;
 
