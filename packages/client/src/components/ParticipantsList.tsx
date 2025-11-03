@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Vote } from '@planning-poker/shared';
 import { Users, Eye } from 'lucide-react';
+import Avatar from './Avatar';
 
 interface ParticipantsListProps {
   participants: User[];
@@ -60,9 +61,11 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="avatar-md">
-                    {participant.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar 
+                    name={participant.name} 
+                    avatarUrl={participant.avatarUrl}
+                    size="md"
+                  />
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-slate-900">

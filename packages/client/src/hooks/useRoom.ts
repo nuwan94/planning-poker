@@ -25,6 +25,7 @@ export const useRoom = (roomId: string) => {
     const user: User = {
       id: userData.id,
       name: userData.name,
+      avatarUrl: userData.avatarUrl,
       isSpectator: false
     };
     setCurrentUser(user);

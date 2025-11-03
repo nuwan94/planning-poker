@@ -1,11 +1,12 @@
 import React from 'react';
-import { Vote } from '@planning-poker/shared';
+import { Vote, User } from '@planning-poker/shared';
 import { BarChart3, TrendingUp, Target } from 'lucide-react';
 import { calculateAverage, findMostCommonVote } from '@planning-poker/shared';
+import Avatar from './Avatar';
 
 interface VotingResultsProps {
   votes: Vote[];
-  participants: { id: string; name: string }[];
+  participants: User[];
   isRevealed: boolean;
 }
 
@@ -42,6 +43,10 @@ const VotingResults: React.FC<VotingResultsProps> = ({
 
   const getParticipantName = (userId: string) => {
     return participants.find(p => p.id === userId)?.name || 'Unknown';
+  };
+
+  const getParticipant = (userId: string) => {
+    return participants.find(p => p.id === userId);
   };
 
   return (
@@ -112,19 +117,31 @@ const VotingResults: React.FC<VotingResultsProps> = ({
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">Individual Votes</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {votes.map((vote) => (
-            <div
-              key={vote.userId}
-              className="flex items-center justify-between p-2 bg-gray-50 rounded"
-            >
-              <span className="text-sm text-gray-700">
-                {getParticipantName(vote.userId)}
-              </span>
-              <span className="inline-block px-2 py-1 bg-white rounded text-sm font-mono border">
-                {vote.value}
-              </span>
-            </div>
-          ))}
+          {votes.map((vote) => {
+            const participant = getParticipant(vote.userId);
+            return (
+              <div
+                key={vote.userId}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded"
+              >
+                <div className="flex items-center gap-2">
+                  {participant && (
+                    <Avatar 
+                      name={participant.name} 
+                      avatarUrl={participant.avatarUrl}
+                      size="sm"
+                    />
+                  )}
+                  <span className="text-sm text-gray-700">
+                    {getParticipantName(vote.userId)}
+                  </span>
+                </div>
+                <span className="inline-block px-2 py-1 bg-white rounded text-sm font-mono border">
+                  {vote.value}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 

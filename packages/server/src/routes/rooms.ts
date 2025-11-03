@@ -4,9 +4,11 @@ import {
   User, 
   CreateRoomRequest, 
   UpdateRoomRequest, 
-  ApiResponse 
+  ApiResponse,
+  SOCKET_EVENTS
 } from '@planning-poker/shared';
 import { roomService } from '../services/roomService';
+import { io } from '../index';
 import { 
   createRoomValidation, 
   updateRoomValidation, 
@@ -99,6 +101,10 @@ router.put('/:id', updateRoomValidation, async (req: Request<{id: string}, ApiRe
         message: 'Room not found'
       });
     }
+
+    // Broadcast the update to all participants in the room
+    io.to(id).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
+    console.log(`[API] Room ${id} updated and broadcasted to participants`);
 
     res.json({
       success: true,

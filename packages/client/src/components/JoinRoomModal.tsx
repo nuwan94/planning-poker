@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2 } from 'lucide-react';
+import { useAuth0 } from '@auth0/auth0-react';
 import { generateId } from '@planning-poker/shared';
 import toast from 'react-hot-toast';
 
@@ -10,9 +11,21 @@ interface JoinRoomModalProps {
 }
 
 const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
+  const { user, isAuthenticated } = useAuth0();
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const [roomId, setRoomId] = useState('');
+
+  // Auto-fill user name if authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Try to get username from custom claim first, then fallback to standard claims
+      const namespace = 'https://planning-poker.app';
+      const customUsername = (user as any)[`${namespace}/username`];
+      const displayName = customUsername || (user as any).username || user.nickname || user.name || user.email?.split('@')[0] || user.email || '';
+      setUserName(displayName);
+    }
+  }, [isAuthenticated, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,13 +43,15 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     try {
-      const userId = generateId();
+      const userId = isAuthenticated && user?.sub ? user.sub : generateId();
       const finalUserName = userName.trim();
       const finalRoomId = roomId.trim().toUpperCase();
+      const avatarUrl = user?.picture || undefined;
       
       localStorage.setItem('planningPokerUser', JSON.stringify({
         id: userId,
         name: finalUserName,
+        avatarUrl,
       }));
 
       window.location.href = `/room/${finalRoomId}`;
@@ -61,16 +76,18 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Your Name</label>
+            <label className="block text-sm font-medium mb-1">
+              Your Name {isAuthenticated && <span className="text-xs text-gray-500">(from your account)</span>}
+            </label>
             <input
               type="text"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg disabled:bg-gray-100"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               placeholder="Enter your name"
               required
-              disabled={isLoading}
-              autoFocus
+              disabled={isLoading || isAuthenticated}
+              autoFocus={!isAuthenticated}
             />
           </div>
 
@@ -85,6 +102,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
               maxLength={6}
               required
               disabled={isLoading}
+              autoFocus={isAuthenticated}
             />
           </div>
 
