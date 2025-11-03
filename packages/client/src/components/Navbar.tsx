@@ -47,19 +47,15 @@ const Navbar: React.FC<NavbarProps> = ({ roomInfo, onLeaveRoom, onShowCreateModa
               </span>
             </button>
             
-            {location.pathname !== '/' && (
-              <div className="hidden sm:block h-6 w-px bg-slate-300"></div>
-            )}
+            <div className="hidden sm:block h-6 w-px bg-slate-300"></div>
             
-            {location.pathname !== '/' && (
-              <button
-                onClick={handleHomeClick}
-                className="btn-ghost p-2.5 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all duration-200"
-                title="Go to Home"
-              >
-                <Home className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              onClick={handleHomeClick}
+              className="btn-ghost p-2.5 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all duration-200"
+              title="Go to Home"
+            >
+              <Home className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Right section - Actions and user info */}
