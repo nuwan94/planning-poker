@@ -5,8 +5,6 @@ import { Story, IStory as IStoryDoc } from '../models/Story';
 
 export class RoomService {
   async createRoom(name: string, description?: string, owner?: IUser): Promise<IRoom> {
-    console.log(`[RoomService] Creating room: ${name}`);
-    
     // Generate a unique room ID
     let roomId = generateRoomId();
     let existingRoom = await Room.findOne({ id: roomId });
@@ -21,7 +19,6 @@ export class RoomService {
     let participantIds: string[] = [];
     
     if (owner) {
-      console.log(`[RoomService] Creating room with owner: ${owner.name}`);
       // Create or update the owner user
       await User.findOneAndUpdate(
         { id: owner.id },
@@ -31,7 +28,6 @@ export class RoomService {
       ownerId = owner.id;
       participantIds = [owner.id];
     } else {
-      console.log('[RoomService] Creating room without owner');
       // Create room without owner - owner will be set when first user joins
       ownerId = '';
     }
@@ -46,21 +42,26 @@ export class RoomService {
     });
 
     await room.save();
-    console.log(`[RoomService] Room created: ${roomId}`);
     return this.populateRoom(room);
   }
 
   async getRoomById(roomId: string): Promise<IRoom | null> {
-    console.log(`[RoomService] Getting room by ID: ${roomId}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('💾 RoomService: Getting room by ID');
+    console.log('  Room ID:', roomId);
     
     const room = await Room.findOne({ id: roomId });
     if (!room) {
-      console.log(`[RoomService] Room not found: ${roomId}`);
+      console.log('❌ Room not found in database');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return null;
     }
     
+    console.log('✅ Room found in database');
     const populatedRoom = await this.populateRoom(room);
-    console.log(`[RoomService] Room found: ${populatedRoom.name} with ${populatedRoom.participants.length} participants`);
+    console.log('  Populated room participants:', populatedRoom.participants.length);
+    console.log('  Room:', JSON.stringify(populatedRoom, null, 2));
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return populatedRoom;
   }
 
@@ -90,30 +91,41 @@ export class RoomService {
   }
 
   async addParticipant(roomId: string, user: IUser): Promise<IRoom | null> {
-    console.log(`[RoomService] Adding participant ${user.name} to room ${roomId}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('💾 RoomService: Adding participant');
+    console.log('  Room ID:', roomId);
+    console.log('  User:', JSON.stringify(user, null, 2));
     
     // Create or update user
+    console.log('  Creating/updating user in database');
     await User.findOneAndUpdate(
       { id: user.id },
       user,
       { upsert: true, new: true }
     );
-    console.log(`[RoomService] User ${user.name} saved to database`);
+    console.log('  User saved to database');
 
     // Get the room first to check if it needs an owner
+    console.log('  Finding room in database');
     const existingRoom = await Room.findOne({ id: roomId });
     if (!existingRoom) {
-      console.log(`[RoomService] Room ${roomId} not found`);
+      console.log('❌ Room not found');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return null;
     }
+
+    console.log('  Existing room found');
+    console.log('  Current owner ID:', existingRoom.ownerId);
+    console.log('  Current participants:', existingRoom.participantIds);
 
     // If room has no owner or empty ownerId, make this user the owner
     const updateData: any = { $addToSet: { participantIds: user.id } };
     if (!existingRoom.ownerId || existingRoom.ownerId === '') {
-      console.log(`[RoomService] Setting ${user.name} as room owner`);
+      console.log('  Setting user as room owner');
       updateData.ownerId = user.id;
     }
 
+    console.log('  Updating room with participant');
     const room = await Room.findOneAndUpdate(
       { id: roomId },
       updateData,
@@ -121,18 +133,20 @@ export class RoomService {
     );
 
     if (!room) {
-      console.log(`[RoomService] Failed to update room ${roomId}`);
+      console.log('❌ Failed to update room');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return null;
     }
     
+    console.log('✅ Participant added successfully');
+    console.log('  Updated participant IDs:', room.participantIds);
     const populatedRoom = await this.populateRoom(room);
-    console.log(`[RoomService] Participant added successfully. Total participants: ${populatedRoom.participants.length}`);
+    console.log('  Final participants count:', populatedRoom.participants.length);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return populatedRoom;
   }
 
   async removeParticipant(roomId: string, userId: string): Promise<IRoom | null> {
-    console.log(`[RoomService] Removing participant ${userId} from room ${roomId}`);
-    
     const room = await Room.findOneAndUpdate(
       { id: roomId },
       { $pull: { participantIds: userId } },
@@ -165,46 +179,40 @@ export class RoomService {
     return this.populateRoom(room);
   }
 
-  private async populateRoom(room: IRoomDoc): Promise<IRoom> {
-    // Fetch all participants
-    const participants = await User.find({
-      id: { $in: room.participantIds }
-    }).lean();
+  async setOwner(roomId: string, userId: string): Promise<IRoom | null> {
+    const room = await Room.findOneAndUpdate(
+      { id: roomId },
+      { ownerId: userId },
+      { new: true }
+    );
 
-    // Fetch current story if exists
+    if (!room) return null;
+    return this.populateRoom(room);
+  }
+
+  private async populateRoom(roomDoc: IRoomDoc): Promise<IRoom> {
+    // Get participants
+    const participants = await User.find({ id: { $in: roomDoc.participantIds } });
+    
+    // Get current story if exists
     let currentStory: IStory | undefined;
-    if (room.currentStoryId) {
-      const storyDoc = await Story.findOne({ id: room.currentStoryId }).lean();
+    if (roomDoc.currentStoryId) {
+      const storyDoc = await Story.findOne({ id: roomDoc.currentStoryId });
       if (storyDoc) {
-        currentStory = {
-          id: storyDoc.id,
-          title: storyDoc.title,
-          description: storyDoc.description,
-          acceptanceCriteria: storyDoc.acceptanceCriteria,
-          finalEstimate: storyDoc.finalEstimate,
-          votes: storyDoc.votes,
-          isRevealed: storyDoc.isRevealed,
-          createdAt: storyDoc.createdAt
-        };
+        currentStory = storyDoc.toJSON() as IStory;
       }
     }
 
     return {
-      id: room.id,
-      name: room.name,
-      description: room.description,
-      ownerId: room.ownerId,
-      participants: participants.map(p => ({
-        id: p.id,
-        name: p.name,
-        email: p.email,
-        avatarUrl: p.avatarUrl,
-        isSpectator: p.isSpectator
-      })),
+      id: roomDoc.id,
+      name: roomDoc.name,
+      description: roomDoc.description,
+      ownerId: roomDoc.ownerId,
+      participants: participants.map(p => p.toJSON() as IUser),
       currentStory,
-      isVotingActive: room.isVotingActive,
-      createdAt: room.createdAt,
-      updatedAt: room.updatedAt
+      isVotingActive: roomDoc.isVotingActive,
+      createdAt: roomDoc.createdAt,
+      updatedAt: roomDoc.updatedAt
     };
   }
 }

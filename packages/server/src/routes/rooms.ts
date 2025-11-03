@@ -25,6 +25,7 @@ router.get('/', async (req: Request, res: Response<ApiResponse<Room[]>>) => {
       data: rooms
     });
   } catch (error) {
+    console.error('Error fetching rooms:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch rooms'
@@ -37,20 +38,24 @@ router.get('/:id', roomIdValidation, async (req: Request, res: Response<ApiRespo
   const { id } = req.params;
   
   try {
+    console.log(`[API] Getting room: ${id}`);
     const room = await roomService.getRoomById(id);
     
     if (!room) {
+      console.log(`[API] Room not found: ${id}`);
       return res.status(404).json({
         success: false,
         message: 'Room not found'
       });
     }
 
+    console.log(`[API] Room found: ${room.name} with ${room.participants.length} participants`);
     res.json({
       success: true,
       data: room
     });
   } catch (error) {
+    console.error(`Error fetching room ${id}:`, error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch room'
@@ -63,13 +68,16 @@ router.post('/', createRoomValidation, async (req: Request<{}, ApiResponse<Room>
   const { name, description, owner } = req.body;
 
   try {
+    console.log('[API] Creating room:', { name, owner: owner?.name });
     const room = await roomService.createRoom(name, description, owner);
     
+    console.log(`[API] Room created: ${room.id} - ${room.name}`);
     res.status(201).json({
       success: true,
       data: room
     });
   } catch (error) {
+    console.error('Error creating room:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create room'
@@ -97,6 +105,7 @@ router.put('/:id', updateRoomValidation, async (req: Request<{id: string}, ApiRe
       data: room
     });
   } catch (error) {
+    console.error(`Error updating room ${id}:`, error);
     res.status(500).json({
       success: false,
       message: 'Failed to update room'

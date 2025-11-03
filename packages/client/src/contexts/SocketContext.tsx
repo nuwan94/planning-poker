@@ -20,22 +20,50 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🌐 SocketProvider: Initializing socket connection');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    console.log('  API URL:', apiUrl);
+    
+    const socketInstance = io(apiUrl);
+    console.log('  Socket instance created');
     
     socketInstance.on('connect', () => {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('✅ Socket connected to server');
+      console.log('  Socket ID:', socketInstance.id);
+      console.log('  Transport:', socketInstance.io.engine.transport.name);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       setIsConnected(true);
-      console.log('Connected to server');
     });
 
-    socketInstance.on('disconnect', () => {
+    socketInstance.on('disconnect', (reason) => {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('❌ Socket disconnected from server');
+      console.log('  Reason:', reason);
+      console.log('  Socket ID:', socketInstance.id);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       setIsConnected(false);
-      console.log('Disconnected from server');
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ Socket connection error');
+      console.error('  Error:', error.message);
+      console.error('  Stack:', error.stack);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
 
     setSocket(socketInstance);
+    console.log('✅ SocketProvider: Socket instance set in state');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return () => {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🧹 SocketProvider: Cleanup - closing socket');
       socketInstance.close();
+      console.log('✅ Socket closed');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     };
   }, []);
 

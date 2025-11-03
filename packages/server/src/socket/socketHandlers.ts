@@ -6,68 +6,101 @@ import { storyService } from '../services/storyService';
 const userSockets = new Map<string, Socket>();
 
 export const setupSocketHandlers = (io: SocketIOServer) => {
+  console.log('[Socket] Setting up Socket.IO handlers');
+  
   io.on('connection', (socket: Socket) => {
-    console.log(`User connected: ${socket.id}`);
+    console.log('[Socket] New client connected:', socket.id);
 
     socket.on(SOCKET_EVENTS.JOIN_ROOM, async (roomId: string, user: User) => {
+      console.log(`[Socket] JOIN_ROOM: user ${user.name} joining room ${roomId}`);
+      
       try {
-        console.log(`JOIN_ROOM event: user ${user.name} (${user.id}) joining room ${roomId}`);
-        
         // Check if user is already in the room
         const rooms = Array.from(socket.rooms);
+        
         if (rooms.includes(roomId)) {
-          console.log(`User ${user.name} is already in room ${roomId}, skipping join`);
-          // Still send room data in case they need it
+          console.log(`[Socket] User already in room ${roomId}, sending existing room data`);
           const room = await roomService.getRoomById(roomId);
           if (room) {
             socket.emit(SOCKET_EVENTS.ROOM_JOINED, room);
+            console.log(`[Socket] ROOM_JOINED emitted to ${socket.id}`);
+          } else {
+            console.log(`[Socket] Room ${roomId} not found`);
+            socket.emit(SOCKET_EVENTS.ERROR, { message: 'Room not found' });
           }
           return;
         }
 
+        // Join the socket room
         socket.join(roomId);
+        console.log(`[Socket] Socket ${socket.id} joined room ${roomId}`);
+        
+        // Store user socket mapping
         userSockets.set(user.id, socket);
 
+        // Add participant to room in database
         const room = await roomService.addParticipant(roomId, user);
+        
         if (room) {
-          // Notify the joining user that they successfully joined
+          console.log(`[Socket] User ${user.name} added to room ${room.name} (${room.participants.length} participants)`);
+          
+          // Emit to the joining user
           socket.emit(SOCKET_EVENTS.ROOM_JOINED, room);
-          // Notify all users about the updated room state
+          console.log(`[Socket] ROOM_JOINED emitted to ${socket.id}`);
+          
+          // Notify all users in the room about the update
           io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
-          console.log(`User ${user.name} successfully joined room ${roomId}`);
+          console.log(`[Socket] ROOM_UPDATED broadcasted to room ${roomId}`);
         } else {
+          console.log(`[Socket] Room ${roomId} not found in database`);
           socket.emit(SOCKET_EVENTS.ERROR, { message: 'Room not found' });
         }
       } catch (error) {
-        console.error('Error joining room:', error);
+        console.error('[Socket] Error in JOIN_ROOM:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to join room' });
       }
     });
 
-    socket.on(SOCKET_EVENTS.VOTING_STARTED, async (roomId: string, storyId: string) => {
+    socket.on(SOCKET_EVENTS.LEAVE_ROOM, async (roomId: string, userId: string) => {
+      console.log(`[Socket] LEAVE_ROOM: user ${userId} leaving room ${roomId}`);
+      
       try {
-        console.log(`VOTING_STARTED event: story ${storyId} in room ${roomId}`);
+        socket.leave(roomId);
+        userSockets.delete(userId);
+
+        const room = await roomService.removeParticipant(roomId, userId);
         
-        // Set room voting active and current story
+        if (room) {
+          io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
+          console.log(`[Socket] User ${userId} removed from room ${roomId}`);
+        }
+      } catch (error) {
+        console.error('[Socket] Error in LEAVE_ROOM:', error);
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.VOTING_STARTED, async (roomId: string, storyId: string) => {
+      console.log(`[Socket] VOTING_STARTED: story ${storyId} in room ${roomId}`);
+      
+      try {
         await roomService.setVotingActive(roomId, true);
         await roomService.setCurrentStory(roomId, storyId);
         
         const room = await roomService.getRoomById(roomId);
         if (room) {
           io.to(roomId).emit(SOCKET_EVENTS.VOTING_STARTED, room);
-          console.log(`Voting started for story ${storyId} in room ${roomId}`);
+          console.log(`[Socket] Voting started for story ${storyId}`);
         }
       } catch (error) {
-        console.error('Error starting voting:', error);
+        console.error('[Socket] Error in VOTING_STARTED:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to start voting' });
       }
     });
 
     socket.on(SOCKET_EVENTS.VOTE_SUBMITTED, async (storyId: string, vote: Vote) => {
+      console.log(`[Socket] VOTE_SUBMITTED: user ${vote.userId} voting ${vote.value} on story ${storyId}`);
+      
       try {
-        console.log(`VOTE_SUBMITTED event: user ${vote.userId} voting ${vote.value} on story ${storyId}`);
-        
-        // Get the story document to access roomId
         const storyDoc = await storyService.getStoryDocument(storyId);
         if (!storyDoc) {
           socket.emit(SOCKET_EVENTS.ERROR, { message: 'Story not found' });
@@ -77,129 +110,98 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         const story = await storyService.addVote(storyId, vote);
         if (story) {
           io.to(storyDoc.roomId).emit(SOCKET_EVENTS.VOTE_SUBMITTED, story);
-          console.log(`Vote submitted for story ${storyId}`);
+          console.log(`[Socket] Vote submitted for story ${storyId}`);
         }
       } catch (error) {
-        console.error('Error submitting vote:', error);
+        console.error('[Socket] Error in VOTE_SUBMITTED:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to submit vote' });
       }
     });
 
     socket.on(SOCKET_EVENTS.VOTES_REVEALED, async (roomId: string, storyId: string) => {
+      console.log(`[Socket] VOTES_REVEALED: story ${storyId} in room ${roomId}`);
+      
       try {
-        console.log(`VOTES_REVEALED event: story ${storyId} in room ${roomId}`);
-        
         const story = await storyService.revealVotes(storyId);
         if (story) {
           io.to(roomId).emit(SOCKET_EVENTS.VOTES_REVEALED, story);
-          console.log(`Votes revealed for story ${storyId}`);
+          console.log(`[Socket] Votes revealed for story ${storyId}`);
         }
       } catch (error) {
-        console.error('Error revealing votes:', error);
+        console.error('[Socket] Error in VOTES_REVEALED:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to reveal votes' });
       }
     });
 
     socket.on(SOCKET_EVENTS.VOTES_CLEARED, async (roomId: string, storyId: string) => {
+      console.log(`[Socket] VOTES_CLEARED: story ${storyId} in room ${roomId}`);
+      
       try {
-        console.log(`VOTES_CLEARED event: story ${storyId} in room ${roomId}`);
-        
         const story = await storyService.clearVotes(storyId);
         if (story) {
           io.to(roomId).emit(SOCKET_EVENTS.VOTES_CLEARED, story);
-          console.log(`Votes cleared for story ${storyId}`);
+          console.log(`[Socket] Votes cleared for story ${storyId}`);
         }
       } catch (error) {
-        console.error('Error clearing votes:', error);
+        console.error('[Socket] Error in VOTES_CLEARED:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to clear votes' });
       }
     });
 
-    socket.on(SOCKET_EVENTS.STORY_CREATED, async (roomId: string, storyData: { title: string; description?: string; acceptanceCriteria?: string[] }) => {
+    socket.on(SOCKET_EVENTS.STORY_CREATED, async (roomId: string, story: any) => {
+      console.log(`[Socket] STORY_CREATED: ${story.title} in room ${roomId}`);
+      
       try {
-        console.log(`STORY_CREATED event: creating story in room ${roomId}`);
-        
-        const story = await storyService.createStory(
-          roomId,
-          storyData.title,
-          storyData.description,
-          storyData.acceptanceCriteria
-        );
-        
-        if (story) {
-          io.to(roomId).emit(SOCKET_EVENTS.STORY_CREATED, story);
-          console.log(`Story created in room ${roomId}: ${story.title}`);
-        }
+        io.to(roomId).emit(SOCKET_EVENTS.STORY_CREATED, story);
       } catch (error) {
-        console.error('Error creating story:', error);
-        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to create story' });
+        console.error('[Socket] Error in STORY_CREATED:', error);
       }
     });
 
-    socket.on(SOCKET_EVENTS.STORY_UPDATED, async (storyId: string, updates: Partial<{ title: string; description: string; acceptanceCriteria: string[] }>) => {
+    socket.on(SOCKET_EVENTS.STORY_UPDATED, async (storyId: string, updates: any) => {
+      console.log(`[Socket] STORY_UPDATED: story ${storyId}`);
+      
       try {
-        console.log(`STORY_UPDATED event: updating story ${storyId}`);
-        
-        // Get the story document to access roomId
-        const storyDoc = await storyService.getStoryDocument(storyId);
-        if (!storyDoc) {
-          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Story not found' });
-          return;
-        }
-
         const story = await storyService.updateStory(storyId, updates);
         if (story) {
-          io.to(storyDoc.roomId).emit(SOCKET_EVENTS.STORY_UPDATED, story);
-          console.log(`Story updated: ${storyId}`);
+          const storyDoc = await storyService.getStoryDocument(storyId);
+          if (storyDoc) {
+            io.to(storyDoc.roomId).emit(SOCKET_EVENTS.STORY_UPDATED, story);
+            console.log(`[Socket] Story ${storyId} updated`);
+          }
         }
       } catch (error) {
-        console.error('Error updating story:', error);
+        console.error('[Socket] Error in STORY_UPDATED:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to update story' });
       }
     });
 
-    socket.on(SOCKET_EVENTS.FINAL_ESTIMATE_SET, async (storyId: string, estimate: string) => {
+    socket.on(SOCKET_EVENTS.FINAL_ESTIMATE_SET, async (roomId: string, storyId: string, estimate: string) => {
+      console.log(`[Socket] FINAL_ESTIMATE_SET: ${estimate} for story ${storyId}`);
+      
       try {
-        console.log(`FINAL_ESTIMATE_SET event: setting estimate ${estimate} for story ${storyId}`);
-        
-        // Get the story document to access roomId
-        const storyDoc = await storyService.getStoryDocument(storyId);
-        if (!storyDoc) {
-          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Story not found' });
-          return;
-        }
-
-        const story = await storyService.updateStory(storyId, { finalEstimate: estimate });
+        const story = await storyService.setFinalEstimate(storyId, estimate);
         if (story) {
-          io.to(storyDoc.roomId).emit(SOCKET_EVENTS.FINAL_ESTIMATE_SET, story);
-          console.log(`Final estimate set for story ${storyId}: ${estimate}`);
+          io.to(roomId).emit(SOCKET_EVENTS.FINAL_ESTIMATE_SET, story);
+          console.log(`[Socket] Final estimate set for story ${storyId}`);
         }
       } catch (error) {
-        console.error('Error setting final estimate:', error);
+        console.error('[Socket] Error in FINAL_ESTIMATE_SET:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to set final estimate' });
       }
     });
 
-    socket.on(SOCKET_EVENTS.LEAVE_ROOM, async (roomId: string, userId: string) => {
-      try {
-        console.log(`LEAVE_ROOM event: user ${userId} leaving room ${roomId}`);
-        
-        socket.leave(roomId);
-        userSockets.delete(userId);
-
-        const room = await roomService.removeParticipant(roomId, userId);
-        if (room) {
-          // Notify all remaining users about the updated room state
-          io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, room);
-          console.log(`User ${userId} left room ${roomId}`);
+    socket.on('disconnect', (reason) => {
+      console.log(`[Socket] Client disconnected: ${socket.id}, reason: ${reason}`);
+      
+      // Clean up user socket mapping
+      for (const [userId, userSocket] of userSockets.entries()) {
+        if (userSocket.id === socket.id) {
+          userSockets.delete(userId);
+          console.log(`[Socket] Removed user ${userId} from socket mapping`);
+          break;
         }
-      } catch (error) {
-        console.error('Error leaving room:', error);
       }
-    });
-
-    socket.on('disconnect', () => {
-      console.log(`User disconnected: ${socket.id}`);
     });
   });
 };

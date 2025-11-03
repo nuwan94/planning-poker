@@ -47,25 +47,49 @@ class ApiClient {
   }
 
   async getRoom(roomId: string): Promise<Room | null> {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🌐 API: Getting room');
+    console.log('  Room ID:', roomId);
+    console.log('  URL:', `${API_BASE_URL}/api/rooms/${roomId}`);
+    
     try {
       const response = await this.request<Room>(`/api/rooms/${roomId}`);
+      console.log('✅ API: Room received');
+      console.log('  Response:', JSON.stringify(response, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return response.data || null;
     } catch (error) {
-      console.error('Failed to get room:', error);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ API: Failed to get room');
+      console.error('  Error:', error);
+      console.error('  Message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return null;
     }
   }
 
   async createRoom(roomData: CreateRoomRequest): Promise<Room> {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🌐 API: Creating room');
+    console.log('  Room data:', JSON.stringify(roomData, null, 2));
+    console.log('  URL:', `${API_BASE_URL}/api/rooms`);
+    
     const response = await this.request<Room>('/api/rooms', {
       method: 'POST',
       body: JSON.stringify(roomData),
     });
     
     if (!response.success || !response.data) {
+      console.error('❌ API: Failed to create room');
+      console.error('  Response:', response);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       throw new Error(response.message || 'Failed to create room');
     }
     
+    console.log('✅ API: Room created');
+    console.log('  Room ID:', response.data.id);
+    console.log('  Room:', JSON.stringify(response.data, null, 2));
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return response.data;
   }
 
