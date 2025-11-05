@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
-import { Story, Vote, SOCKET_EVENTS, CARD_DECKS } from '@planning-poker/shared';
-import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2 } from 'lucide-react';
+import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId } from '@planning-poker/shared';
+import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2, Loader2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 import Avatar from '../components/Avatar';
@@ -15,13 +16,19 @@ import StoryHistory from '../components/StoryHistory';
 const RoomPage: React.FC = () => {
   const { id: roomId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { room, currentUser, isLoading } = useRoom(roomId || '');
+  const { user, isAuthenticated, loginWithRedirect } = useAuth0();
+  const { room, currentUser, isLoading, authRequired, joinRoomWithUser } = useRoom(roomId || '');
   const { socket } = useSocket();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingDeck, setIsEditingDeck] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Authentication modal state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
   
   // Story and voting state
   const [currentStory, setCurrentStory] = useState<Story | undefined>(room?.currentStory);
@@ -136,6 +143,13 @@ const RoomPage: React.FC = () => {
       socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
     };
   }, [socket, roomId]);
+
+  // Handle authentication requirement
+  useEffect(() => {
+    if (authRequired) {
+      setShowAuthModal(true);
+    }
+  }, [authRequired]);
 
   const isOwner = room && currentUser && room.ownerId === currentUser.id;
 
@@ -304,6 +318,65 @@ const RoomPage: React.FC = () => {
     socket.emit(SOCKET_EVENTS.FINAL_ESTIMATE_SET, roomId, currentStory.id, estimate);
   };
 
+  // Authentication handlers
+  const handleJoinAsAuthenticated = async () => {
+    if (!isAuthenticated || !user || !joinRoomWithUser) return;
+
+    setIsJoining(true);
+    try {
+      // Try to get username from custom claim first, then fallback to standard claims
+      const namespace = 'https://planning-poker.app';
+      const customUsername = (user as any)[`${namespace}/username`];
+      const displayName = customUsername || (user as any).username || user.nickname || user.name || user.email?.split('@')[0] || user.email || '';
+
+      const userId = user.sub || generateId();
+      const finalUserName = displayName;
+      const avatarUrl = user.picture || undefined;
+      
+      const userObj = {
+        id: userId,
+        name: finalUserName,
+        avatarUrl,
+        isSpectator: false
+      };
+
+      localStorage.setItem('planningPokerUser', JSON.stringify(userObj));
+      await joinRoomWithUser(userObj);
+      setShowAuthModal(false);
+    } catch (error) {
+      console.error('Join room error:', error);
+      toast.error('Failed to join room');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleJoinAsGuest = async () => {
+    if (!guestName.trim() || !joinRoomWithUser) return;
+
+    setIsJoining(true);
+    try {
+      const userId = generateId();
+      const finalUserName = guestName.trim();
+      
+      const userObj = {
+        id: userId,
+        name: finalUserName,
+        avatarUrl: undefined,
+        isSpectator: false
+      };
+
+      localStorage.setItem('planningPokerUser', JSON.stringify(userObj));
+      await joinRoomWithUser(userObj);
+      setShowAuthModal(false);
+    } catch (error) {
+      console.error('Join room error:', error);
+      toast.error('Failed to join room');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -315,7 +388,7 @@ const RoomPage: React.FC = () => {
     );
   }
 
-  if (!room) {
+  if (!room && !authRequired) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -333,6 +406,7 @@ const RoomPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {room && (
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header Section */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -603,6 +677,102 @@ const RoomPage: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Authentication Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold mb-2">Join Room</h2>
+              <p className="text-sm text-gray-600">Choose how you'd like to join this planning poker session</p>
+            </div>
+            
+            <div className="space-y-4">
+              {isAuthenticated ? (
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-4">Welcome back! Join as:</p>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <img 
+                      src={user?.picture} 
+                      alt={user?.name} 
+                      className="w-8 h-8 rounded-full"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <span className="font-medium">{user?.name || user?.email}</span>
+                  </div>
+                  <button
+                    onClick={handleJoinAsAuthenticated}
+                    disabled={isJoining}
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
+                  >
+                    {isJoining ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      'Join as Authenticated User'
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <button
+                    onClick={() => loginWithRedirect({
+                      appState: {
+                        returnTo: window.location.pathname
+                      }
+                    })}
+                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                  >
+                    Login to Join
+                  </button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">or</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Continue as Guest</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      placeholder="Enter your name"
+                      maxLength={50}
+                      onKeyPress={(e) => e.key === 'Enter' && handleJoinAsGuest()}
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={handleJoinAsGuest}
+                    disabled={isJoining || !guestName.trim()}
+                    className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
+                  >
+                    {isJoining ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      'Join as Guest'
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
