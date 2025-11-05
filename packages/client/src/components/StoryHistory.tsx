@@ -142,12 +142,12 @@ const StoryHistory: React.FC<StoryHistoryProps> = ({ stories }) => {
                     <div className="mt-3">
                       <p className="text-xs font-semibold text-slate-600 mb-2">Vote Distribution</p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(
-                          voteValues.reduce((acc, vote) => {
+                        {(Object.entries(
+                          voteValues.reduce((acc: Record<string, number>, vote) => {
                             acc[vote] = (acc[vote] || 0) + 1;
                             return acc;
-                          }, {} as Record<string, number>)
-                        )
+                          }, {})
+                        ) as [string, number][])
                           .sort(([a], [b]) => {
                             const numA = parseFloat(a);
                             const numB = parseFloat(b);

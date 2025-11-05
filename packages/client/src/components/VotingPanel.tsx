@@ -1,5 +1,5 @@
 import React from 'react';
-import { CARD_DECKS } from '@planning-poker/shared';
+import { CARD_DECKS, CardDeck } from '@planning-poker/shared';
 import PlanningPokerCard from './PlanningPokerCard';
 
 interface VotingPanelProps {
@@ -17,7 +17,7 @@ const VotingPanel: React.FC<VotingPanelProps> = ({
   isVotingActive,
   onVote
 }) => {
-  const deck = Object.values(CARD_DECKS).find(d => d.id === selectedDeck) || CARD_DECKS.FIBONACCI;
+  const deck = (Object.values(CARD_DECKS) as unknown as CardDeck[]).find(d => d.id === selectedDeck) || CARD_DECKS.FIBONACCI;
 
   if (!isVotingActive) {
     return (

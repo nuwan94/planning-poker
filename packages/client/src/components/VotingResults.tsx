@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Vote, User, CARD_DECKS } from '@planning-poker/shared';
+import { Vote, User, CARD_DECKS, CardDeck } from '@planning-poker/shared';
 import { BarChart3, CheckCircle2, Sparkles, MessageSquare } from 'lucide-react';
 import { calculateAverage, findMostCommonVote, isValidCardValue, findNearestCardValue } from '@planning-poker/shared';
 import Avatar from './Avatar';
@@ -38,14 +38,14 @@ const VotingResults: React.FC<VotingResultsProps> = ({
   const consensus = findMostCommonVote(voteValues);
   
   // Get all possible values from the card deck
-  const deckValues = Object.values(CARD_DECKS).find(deck => deck.id === cardDeckId)?.values || 
+  const deckValues = (Object.values(CARD_DECKS) as unknown as CardDeck[]).find(deck => deck.id === cardDeckId)?.values || 
                      CARD_DECKS.FIBONACCI.values;
   
   // Count votes by value and group voters
-  const voteCounts = voteValues.reduce((acc, vote) => {
+  const voteCounts: Record<string, number> = voteValues.reduce((acc, vote) => {
     acc[vote] = (acc[vote] || 0) + 1;
     return acc;
-  }, {} as Record<string, number>);
+  }, {});
 
   // Group voters by their vote value
   const votersByValue = safeVotes.reduce((acc, vote) => {

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
-import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId } from '@planning-poker/shared';
+import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck } from '@planning-poker/shared';
 import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2, Loader2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
@@ -242,7 +242,7 @@ const RoomPage: React.FC = () => {
     try {
       const updatedRoom = await apiClient.updateRoom(room.id, { cardDeckId: deckId });
       console.log('[RoomPage] Card deck updated:', updatedRoom);
-      const deckName = Object.values(CARD_DECKS).find(d => d.id === deckId)?.name || deckId;
+      const deckName = (Object.values(CARD_DECKS) as unknown as CardDeck[]).find(d => d.id === deckId)?.name || deckId;
       toast.success(`Card deck changed to ${deckName}`);
       setIsEditingDeck(false);
       // The room will be updated via socket broadcast from server
@@ -492,7 +492,7 @@ const RoomPage: React.FC = () => {
                           disabled={isSaving}
                           className="text-sm border border-slate-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:opacity-50"
                         >
-                          {Object.values(CARD_DECKS).map((deck) => (
+                          {(Object.values(CARD_DECKS) as unknown as CardDeck[]).map((deck) => (
                             <option key={deck.id} value={deck.id}>
                               {deck.name}
                             </option>
@@ -513,7 +513,7 @@ const RoomPage: React.FC = () => {
                         className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
                         title="Change deck"
                       >
-                        {Object.values(CARD_DECKS).find(d => d.id === (room.cardDeckId || 'fibonacci'))?.name || 'Fibonacci'}
+                        {(Object.values(CARD_DECKS) as unknown as CardDeck[]).find(d => d.id === (room.cardDeckId || 'fibonacci'))?.name || 'Fibonacci'}
                       </button>
                     )}
                   </div>
