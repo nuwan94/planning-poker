@@ -255,4 +255,22 @@
   .fade-in {
     @apply animate-slide-up;
   }
+
+  /* 3D Perspective and Transform Utilities */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .rotate-y-12 {
+    transform: rotateY(12deg) rotateX(-2deg);
+  }
+
+  .rotate-y-6 {
+    transform: rotateY(6deg) rotateX(-1deg);
+  }
+
+  /* Preserve 3D for nested transforms */
+  .perspective-1000 > * {
+    transform-style: preserve-3d;
+  }
 }
