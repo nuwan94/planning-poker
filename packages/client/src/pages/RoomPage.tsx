@@ -318,6 +318,12 @@ const RoomPage: React.FC = () => {
     socket.emit(SOCKET_EVENTS.FINAL_ESTIMATE_SET, roomId, currentStory.id, estimate);
   };
 
+  const handleRemoveUser = (userIdToRemove: string) => {
+    if (!socket || !roomId || !currentUser || !isOwner) return;
+    console.log('[RoomPage] Removing user:', userIdToRemove, 'from room:', roomId);
+    socket.emit(SOCKET_EVENTS.REMOVE_USER, roomId, userIdToRemove, currentUser.id);
+  };
+
   // Authentication handlers
   const handleJoinAsAuthenticated = async () => {
     if (!isAuthenticated || !user || !joinRoomWithUser) return;
@@ -627,6 +633,17 @@ const RoomPage: React.FC = () => {
                       <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-1 ring-2 ring-white shadow-lg">
                         <Crown className="w-3 h-3 text-yellow-900" fill="currentColor" />
                       </div>
+                    )}
+
+                    {/* Remove button for room owner (not themselves) */}
+                    {room.ownerId === currentUser?.id && !isCurrentUser && (
+                      <button
+                        onClick={() => handleRemoveUser(participant.id)}
+                        className="absolute -top-1 -left-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 ring-2 ring-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        title={`Remove ${participant.name} from room`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
                   

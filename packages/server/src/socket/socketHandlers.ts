@@ -4,6 +4,8 @@ import { roomService } from '../services/roomService';
 import { storyService } from '../services/storyService';
 
 const userSockets = new Map<string, Socket>();
+const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
+const userRooms = new Map<string, string>();
 
 export const setupSocketHandlers = (io: SocketIOServer) => {
   console.log('[Socket] Setting up Socket.IO handlers');
@@ -15,6 +17,12 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
       console.log(`[Socket] JOIN_ROOM: user ${user.name} joining room ${roomId}`);
       
       try {
+        // Clear any existing disconnect timeout for this user
+        if (disconnectTimeouts.has(user.id)) {
+          clearTimeout(disconnectTimeouts.get(user.id)!);
+          disconnectTimeouts.delete(user.id);
+          console.log(`[Socket] Cleared disconnect timeout for reconnected user ${user.id}`);
+        }
         // Check if user is already in the room
         const rooms = Array.from(socket.rooms);
         
@@ -37,6 +45,9 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         
         // Store user socket mapping
         userSockets.set(user.id, socket);
+
+        // Store user room mapping
+        userRooms.set(user.id, roomId);
 
         // Add participant to room in database
         const room = await roomService.addParticipant(roomId, user);
@@ -67,6 +78,7 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
       try {
         socket.leave(roomId);
         userSockets.delete(userId);
+        userRooms.delete(userId);
 
         const room = await roomService.removeParticipant(roomId, userId);
         
@@ -76,6 +88,57 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         }
       } catch (error) {
         console.error('[Socket] Error in LEAVE_ROOM:', error);
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.REMOVE_USER, async (roomId: string, userIdToRemove: string, requestingUserId: string) => {
+      console.log(`[Socket] REMOVE_USER: ${requestingUserId} requesting to remove ${userIdToRemove} from room ${roomId}`);
+      
+      try {
+        // Check if the requesting user is the room owner
+        const room = await roomService.getRoomById(roomId);
+        if (!room) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Room not found' });
+          return;
+        }
+
+        if (room.ownerId !== requestingUserId) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Only room owner can remove users' });
+          return;
+        }
+
+        // Cannot remove yourself
+        if (userIdToRemove === requestingUserId) {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Cannot remove yourself from the room' });
+          return;
+        }
+
+        // Remove the user from the room
+        const updatedRoom = await roomService.removeParticipant(roomId, userIdToRemove);
+        
+        if (updatedRoom) {
+          // Clear any disconnect timeout for this user
+          if (disconnectTimeouts.has(userIdToRemove)) {
+            clearTimeout(disconnectTimeouts.get(userIdToRemove)!);
+            disconnectTimeouts.delete(userIdToRemove);
+            console.log(`[Socket] Cleared disconnect timeout for manually removed user ${userIdToRemove}`);
+          }
+
+          // Disconnect the user's socket if they're connected
+          const userSocket = userSockets.get(userIdToRemove);
+          if (userSocket) {
+            userSocket.leave(roomId);
+            userSockets.delete(userIdToRemove);
+            userRooms.delete(userIdToRemove);
+            console.log(`[Socket] Disconnected socket for removed user ${userIdToRemove}`);
+          }
+
+          io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, updatedRoom);
+          console.log(`[Socket] User ${userIdToRemove} removed from room ${roomId} by owner ${requestingUserId}`);
+        }
+      } catch (error) {
+        console.error('[Socket] Error in REMOVE_USER:', error);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to remove user' });
       }
     });
 
@@ -215,13 +278,45 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
     socket.on('disconnect', (reason) => {
       console.log(`[Socket] Client disconnected: ${socket.id}, reason: ${reason}`);
       
-      // Clean up user socket mapping
+      // Find the user ID for this socket
+      let disconnectedUserId: string | null = null;
       for (const [userId, userSocket] of userSockets.entries()) {
         if (userSocket.id === socket.id) {
-          userSockets.delete(userId);
-          console.log(`[Socket] Removed user ${userId} from socket mapping`);
+          disconnectedUserId = userId;
           break;
         }
+      }
+
+      if (disconnectedUserId) {
+        // Get the room ID for this user
+        const roomId = userRooms.get(disconnectedUserId);
+        
+        // Clean up user socket and room mapping
+        userSockets.delete(disconnectedUserId);
+        userRooms.delete(disconnectedUserId);
+        console.log(`[Socket] Removed user ${disconnectedUserId} from socket and room mapping`);
+
+        // Set timeout to remove user from room after 30 seconds
+        const timeout = setTimeout(async () => {
+          console.log(`[Socket] Removing disconnected user ${disconnectedUserId} from room after timeout`);
+          
+          if (roomId) {
+            try {
+              const updatedRoom = await roomService.removeParticipant(roomId, disconnectedUserId!);
+              if (updatedRoom) {
+                io.to(roomId).emit(SOCKET_EVENTS.ROOM_UPDATED, updatedRoom);
+                console.log(`[Socket] User ${disconnectedUserId} removed from room ${roomId} due to disconnect timeout`);
+              }
+            } catch (error) {
+              console.error(`[Socket] Error removing user ${disconnectedUserId} from room ${roomId}:`, error);
+            }
+          }
+          
+          disconnectTimeouts.delete(disconnectedUserId);
+        }, 30000); // 30 seconds
+
+        disconnectTimeouts.set(disconnectedUserId, timeout);
+        console.log(`[Socket] Set disconnect timeout for user ${disconnectedUserId}`);
       }
     });
   });

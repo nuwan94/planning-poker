@@ -147,6 +147,14 @@ export class RoomService {
     );
 
     if (!room) return null;
+
+    // Check if user is a guest (no email) and delete from User collection if so
+    const user = await User.findOne({ id: userId });
+    if (user && !user.email) {
+      console.log(`[RoomService] Deleting guest user ${userId} from database`);
+      await User.findOneAndDelete({ id: userId });
+    }
+
     return this.populateRoom(room);
   }
 

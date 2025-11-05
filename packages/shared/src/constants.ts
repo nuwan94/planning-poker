@@ -34,6 +34,7 @@ export const SOCKET_EVENTS = {
   ROOM_JOINED: 'room_joined',
   ROOM_LEFT: 'room_left',
   ROOM_UPDATED: 'room_updated',
+  REMOVE_USER: 'remove_user',
   
   // Voting
   VOTING_STARTED: 'voting_started',
