@@ -89,11 +89,11 @@ router.get('/:id', roomIdValidation, async (req: Request, res: Response<ApiRespo
 
 // Create a new room
 router.post('/', createRoomValidation, async (req: Request<{}, ApiResponse<Room>, CreateRoomRequest>, res: Response<ApiResponse<Room>>) => {
-  const { name, description, owner } = req.body;
+  const { name, description, password, owner } = req.body;
 
   try {
-    console.log('[API] Creating room:', { name, owner: owner?.name });
-    const room = await roomService.createRoom(name, description, owner);
+    console.log('[API] Creating room:', { name, owner: owner?.name, hasPassword: !!password });
+    const room = await roomService.createRoom(name, description, password, owner);
     
     console.log(`[API] Room created: ${room.id} - ${room.name}`);
     res.status(201).json({
@@ -170,7 +170,7 @@ router.delete('/:id', roomIdValidation, async (req: Request, res: Response<ApiRe
 // Join room
 router.post('/:id/join', [...roomIdValidation, ...joinRoomValidation], async (req: Request, res: Response<ApiResponse<Room>>) => {
   const { id } = req.params;
-  const { name, isSpectator = false } = req.body;
+  const { name, isSpectator = false, password } = req.body;
   
   try {
     const user: User = {
@@ -179,7 +179,7 @@ router.post('/:id/join', [...roomIdValidation, ...joinRoomValidation], async (re
       isSpectator
     };
     
-    const room = await roomService.addParticipant(id, user);
+    const room = await roomService.addParticipant(id, user, password);
     
     if (!room) {
       return res.status(404).json({

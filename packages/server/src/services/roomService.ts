@@ -2,9 +2,10 @@ import { Room as IRoom, User as IUser, Story as IStory, generateRoomId } from '@
 import { Room, IRoom as IRoomDoc } from '../models/Room';
 import { User, IUser as IUserDoc } from '../models/User';
 import { Story, IStory as IStoryDoc } from '../models/Story';
+import bcrypt from 'bcryptjs';
 
 export class RoomService {
-  async createRoom(name: string, description?: string, owner?: IUser): Promise<IRoom> {
+  async createRoom(name: string, description?: string, password?: string, owner?: IUser): Promise<IRoom> {
     console.log(`[RoomService] Creating room: ${name}`);
     
     // Generate a unique room ID
@@ -36,18 +37,45 @@ export class RoomService {
       ownerId = '';
     }
 
+    let encryptedPassword: string | undefined;
+    if (password) {
+      console.log('[RoomService] Encrypting room password');
+      const saltRounds = 10;
+      encryptedPassword = await bcrypt.hash(password, saltRounds);
+    }
+
     const room = new Room({
       id: roomId,
       name,
       description,
       ownerId,
       participantIds,
-      isVotingActive: false
+      isVotingActive: false,
+      password: encryptedPassword
     });
 
     await room.save();
     console.log(`[RoomService] Room created: ${roomId}`);
     return this.populateRoom(room);
+  }
+
+  async verifyRoomPassword(roomId: string, password: string): Promise<boolean> {
+    console.log(`[RoomService] Verifying password for room: ${roomId}`);
+    
+    const room = await Room.findOne({ id: roomId });
+    if (!room) {
+      console.log(`[RoomService] Room ${roomId} not found`);
+      return false;
+    }
+
+    if (!room.password) {
+      console.log(`[RoomService] Room ${roomId} is not password protected`);
+      return true; // No password required
+    }
+
+    const isValid = await bcrypt.compare(password, room.password);
+    console.log(`[RoomService] Password verification for room ${roomId}: ${isValid ? 'valid' : 'invalid'}`);
+    return isValid;
   }
 
   async getRoomById(roomId: string): Promise<IRoom | null> {
@@ -96,7 +124,7 @@ export class RoomService {
     return result.deletedCount > 0;
   }
 
-  async addParticipant(roomId: string, user: IUser): Promise<IRoom | null> {
+  async addParticipant(roomId: string, user: IUser, password?: string): Promise<IRoom | null> {
     console.log(`[RoomService] Adding participant ${user.name} to room ${roomId}`);
     
     // Create or update user
@@ -112,6 +140,12 @@ export class RoomService {
     if (!existingRoom) {
       console.log(`[RoomService] Room ${roomId} not found`);
       return null;
+    }
+
+    // Verify password if room is protected
+    if (existingRoom.password && !await this.verifyRoomPassword(roomId, password || '')) {
+      console.log(`[RoomService] Invalid password for room ${roomId}`);
+      throw new Error('Invalid password');
     }
 
     // If room has no owner or empty ownerId, make this user the owner
@@ -262,6 +296,7 @@ export class RoomService {
       storyHistory,
       cardDeckId: room.cardDeckId || 'fibonacci',
       isVotingActive: room.isVotingActive,
+      isPasswordProtected: !!room.password,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt
     };

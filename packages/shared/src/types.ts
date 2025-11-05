@@ -18,6 +18,7 @@ export interface Room {
   storyHistory?: Story[];
   cardDeckId?: string;
   isVotingActive: boolean;
+  isPasswordProtected?: boolean; // Indicates if room has password protection
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,7 +52,7 @@ export interface CardDeck {
 // Socket event types
 export interface SocketEvents {
   // Room events
-  joinRoom: (roomId: string, user: User) => void;
+  joinRoom: (roomId: string, user: User, password?: string) => void;
   leaveRoom: (roomId: string, userId: string) => void;
   userJoined: (user: User) => void;
   userLeft: (userId: string) => void;
@@ -87,6 +88,7 @@ export interface CreateRoomRequest {
   name: string;
   description?: string;
   cardDeckId?: string;
+  password?: string; // Optional password for protected rooms
   owner?: User;
 }
 
@@ -94,6 +96,13 @@ export interface UpdateRoomRequest {
   name?: string;
   description?: string;
   cardDeckId?: string;
+}
+
+// Room join types
+export interface JoinRoomRequest {
+  name: string;
+  isSpectator?: boolean;
+  password?: string; // Password for protected rooms
 }
 
 // Story creation/update types

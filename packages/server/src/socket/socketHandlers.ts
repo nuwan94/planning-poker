@@ -13,7 +13,7 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
   io.on('connection', (socket: Socket) => {
     console.log('[Socket] New client connected:', socket.id);
 
-    socket.on(SOCKET_EVENTS.JOIN_ROOM, async (roomId: string, user: User) => {
+    socket.on(SOCKET_EVENTS.JOIN_ROOM, async (roomId: string, user: User, password?: string) => {
       console.log(`[Socket] JOIN_ROOM: user ${user.name} joining room ${roomId}`);
       
       try {
@@ -50,7 +50,7 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         userRooms.set(user.id, roomId);
 
         // Add participant to room in database
-        const room = await roomService.addParticipant(roomId, user);
+        const room = await roomService.addParticipant(roomId, user, password);
         
         if (room) {
           console.log(`[Socket] User ${user.name} added to room ${room.name} (${room.participants.length} participants)`);
@@ -68,7 +68,11 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         }
       } catch (error) {
         console.error('[Socket] Error in JOIN_ROOM:', error);
-        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to join room' });
+        if (error instanceof Error && error.message === 'Invalid password') {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Password required', type: 'password_required' });
+        } else {
+          socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to join room' });
+        }
       }
     });
 

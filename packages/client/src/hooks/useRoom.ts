@@ -10,6 +10,8 @@ export const useRoom = (roomId: string) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authRequired, setAuthRequired] = useState(false);
+  const [roomExists, setRoomExists] = useState<boolean | null>(null);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
 
   useEffect(() => {
     if (!roomId || !socket || !isConnected) {
@@ -44,8 +46,13 @@ export const useRoom = (roomId: string) => {
       setRoom(updatedRoom);
     };
 
-    const handleError = (error: { message: string }) => {
-      toast.error(error.message);
+    const handleError = (error: { message: string; type?: string }) => {
+      if (error.type === 'password_required') {
+        // Don't show error toast for password required - let the password modal handle it
+        console.log('[useRoom] Password required for room access');
+      } else {
+        toast.error(error.message);
+      }
       setIsLoading(false);
     };
 
@@ -71,14 +78,33 @@ export const useRoom = (roomId: string) => {
 
     const initialize = async () => {
       try {
+        // First check if room exists and get basic info
         const roomData = await apiClient.getRoom(roomId);
-        if (roomData) {
-          setRoom(roomData);
+        if (!roomData) {
+          setRoomExists(false);
+          setIsLoading(false);
+          return;
         }
-        socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user);
+
+        setRoomExists(true);
+        setIsPasswordProtected(roomData.isPasswordProtected || false);
+
+        // Check if password is required
+        const savedUser = localStorage.getItem('planningPokerUser');
+        const hasSavedPassword = savedUser ? JSON.parse(savedUser).roomPassword : false;
+
+        if (roomData.isPasswordProtected && !hasSavedPassword) {
+          // Don't attempt join - let the UI handle password prompt
+          console.log('[useRoom] Room requires password, waiting for user input');
+          setIsLoading(false);
+          return;
+        }
+
+        // Room is not password-protected or we have a saved password, attempt join
+        socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user, hasSavedPassword || undefined);
       } catch (error) {
         console.error('Failed to load room:', error);
-        toast.error('Room not found');
+        setRoomExists(false);
         setIsLoading(false);
       }
     };
@@ -124,59 +150,63 @@ export const useRoom = (roomId: string) => {
     };
   }, [currentUser, socket, isConnected]);
 
-  const joinRoomWithUser = async (user: User) => {
-    if (!socket || !isConnected || !roomId) return;
-
-    setCurrentUser(user);
-    setAuthRequired(false);
-    setIsLoading(true);
-
-    const handleRoomJoined = (joinedRoom: Room) => {
-      setRoom(joinedRoom);
-      setIsLoading(false);
-      toast.success(`Joined ${joinedRoom.name}`);
-    };
-
-    const handleRoomUpdated = (updatedRoom: Room) => {
-      setRoom(updatedRoom);
-    };
-
-    const handleError = (error: { message: string }) => {
-      toast.error(error.message);
-      setIsLoading(false);
-    };
-
-    const handleUserStatusUpdate = (data: { userId: string; status: 'online' | 'reconnecting' | 'offline' }) => {
-      setRoom(prevRoom => {
-        if (!prevRoom) return prevRoom;
-        
-        const updatedParticipants = prevRoom.participants.map(participant => {
-          if (participant.id === data.userId) {
-            return { ...participant, status: data.status };
-          }
-          return participant;
-        });
-        
-        return { ...prevRoom, participants: updatedParticipants };
-      });
-    };
-
-    socket.on(SOCKET_EVENTS.ROOM_JOINED, handleRoomJoined);
-    socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
-    socket.on(SOCKET_EVENTS.ERROR, handleError);
-    socket.on(SOCKET_EVENTS.USER_STATUS_UPDATE, handleUserStatusUpdate);
-
-    try {
-      const roomData = await apiClient.getRoom(roomId);
-      if (roomData) {
-        setRoom(roomData);
+  const joinRoomWithUser = async (user: User): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (!socket || !isConnected || !roomId) {
+        reject(new Error('Socket not connected'));
+        return;
       }
-      socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user);
-    } catch (error) {
-      console.error('Failed to load room:', error);
-      toast.error('Room not found');
-      setIsLoading(false);
-    }
+
+      setCurrentUser(user);
+      setAuthRequired(false);
+      setIsLoading(true);
+
+      // Get password from localStorage
+      const savedUser = localStorage.getItem('planningPokerUser');
+      const password = savedUser ? JSON.parse(savedUser).roomPassword : undefined;
+
+      const handleRoomJoined = (joinedRoom: Room) => {
+        setRoom(joinedRoom);
+        setIsLoading(false);
+        toast.success(`Joined ${joinedRoom.name}`);
+        resolve();
+      };
+
+      const handleRoomUpdated = (updatedRoom: Room) => {
+        setRoom(updatedRoom);
+      };
+
+      const handleError = (error: { message: string; type?: string }) => {
+        setIsLoading(false);
+        if (error.type === 'password_required') {
+          reject(new Error('Invalid password'));
+        } else {
+          reject(new Error(error.message || 'Failed to join room'));
+        }
+      };
+
+      const handleUserStatusUpdate = (data: { userId: string; status: 'online' | 'reconnecting' | 'offline' }) => {
+        setRoom(prevRoom => {
+          if (!prevRoom) return prevRoom;
+          
+          const updatedParticipants = prevRoom.participants.map(participant => {
+            if (participant.id === data.userId) {
+              return { ...participant, status: data.status };
+            }
+            return participant;
+          });
+          
+          return { ...prevRoom, participants: updatedParticipants };
+        });
+      };
+
+      socket.on(SOCKET_EVENTS.ROOM_JOINED, handleRoomJoined);
+      socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
+      socket.on(SOCKET_EVENTS.ERROR, handleError);
+      socket.on(SOCKET_EVENTS.USER_STATUS_UPDATE, handleUserStatusUpdate);
+
+      socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user, password);
+    });
   };
 
   return {
@@ -184,6 +214,8 @@ export const useRoom = (roomId: string) => {
     currentUser,
     isLoading,
     authRequired,
+    roomExists,
+    isPasswordProtected,
     joinRoomWithUser,
     votes: room?.currentStory?.votes || [],
     hasVoted: false,

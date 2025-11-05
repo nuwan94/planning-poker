@@ -121,7 +121,7 @@ class ApiClient {
     }
   }
 
-  async joinRoom(roomId: string, userData: { name: string; isSpectator?: boolean }): Promise<Room> {
+  async joinRoom(roomId: string, userData: { name: string; isSpectator?: boolean; password?: string }): Promise<Room> {
     const response = await this.request<Room>(`/api/rooms/${roomId}/join`, {
       method: 'POST',
       body: JSON.stringify(userData),

@@ -10,6 +10,7 @@ export interface IRoom extends Document {
   currentStoryId?: string;
   cardDeckId?: string;
   isVotingActive: boolean;
+  password?: string; // Encrypted password for protected rooms
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +51,10 @@ const RoomSchema = new Schema<IRoom>({
   isVotingActive: {
     type: Boolean,
     default: false
+  },
+  password: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true,

@@ -27,6 +27,10 @@ export const createRoomValidation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Description must not exceed 500 characters'),
+  body('password')
+    .optional()
+    .isLength({ min: 4, max: 50 })
+    .withMessage('Password must be between 4 and 50 characters'),
   handleValidationErrors
 ];
 
@@ -163,5 +167,9 @@ export const joinRoomValidation = [
     .optional()
     .isBoolean()
     .withMessage('isSpectator must be a boolean'),
+  body('password')
+    .optional()
+    .isLength({ min: 4, max: 50 })
+    .withMessage('Password must be between 4 and 50 characters'),
   handleValidationErrors
 ];

@@ -4,6 +4,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { generateId } from '@planning-poker/shared';
 import toast from 'react-hot-toast';
+import { apiClient } from '../services/apiClient';
 
 interface JoinRoomModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const [roomId, setRoomId] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRoomPasswordProtected, setIsRoomPasswordProtected] = useState(false);
 
   // Auto-fill user name if authenticated
   useEffect(() => {
@@ -26,6 +29,25 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
       setUserName(displayName);
     }
   }, [isAuthenticated, user]);
+
+  // Check if room is password protected when roomId changes
+  useEffect(() => {
+    const checkRoomPasswordProtection = async () => {
+      if (roomId.length === 6) {
+        try {
+          const room = await apiClient.getRoom(roomId.toUpperCase());
+          setIsRoomPasswordProtected(room?.isPasswordProtected || false);
+        } catch (error) {
+          // Room doesn't exist or error, reset password protection
+          setIsRoomPasswordProtected(false);
+        }
+      } else {
+        setIsRoomPasswordProtected(false);
+      }
+    };
+
+    checkRoomPasswordProtection();
+  }, [roomId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +74,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
         id: userId,
         name: finalUserName,
         avatarUrl,
+        roomPassword: isRoomPasswordProtected ? password : undefined
       }));
 
       window.location.href = `/room/${finalRoomId}`;
@@ -106,6 +129,21 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
             />
           </div>
 
+          {isRoomPasswordProtected && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Room Password</label>
+              <input
+                type="password"
+                className="w-full px-3 py-2 border rounded-lg"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter room password"
+                required={isRoomPasswordProtected}
+                disabled={isLoading}
+              />
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               type="button"
@@ -117,7 +155,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={isLoading || !userName.trim() || !roomId.trim()}
+              disabled={isLoading || !userName.trim() || !roomId.trim() || (isRoomPasswordProtected && !password.trim())}
               className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
             >
               {isLoading ? (

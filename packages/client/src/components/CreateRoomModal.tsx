@@ -15,6 +15,8 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
   const { user, isAuthenticated } = useAuth0();
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [password, setPassword] = useState('');
 
   // Auto-fill user name if authenticated
   useEffect(() => {
@@ -51,10 +53,12 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
         id: userId,
         name: finalUserName,
         avatarUrl,
+        roomPassword: isPasswordProtected ? password : undefined
       }));
 
       const room = await apiClient.createRoom({
         name: 'Planning Session',
+        password: isPasswordProtected ? password : undefined,
         owner: {
           id: userId,
           name: finalUserName,
@@ -100,6 +104,37 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
             />
           </div>
 
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="passwordProtected"
+              checked={isPasswordProtected}
+              onChange={(e) => setIsPasswordProtected(e.target.checked)}
+              disabled={isLoading}
+              className="rounded"
+            />
+            <label htmlFor="passwordProtected" className="text-sm font-medium">
+              Password protect this room
+            </label>
+          </div>
+
+          {isPasswordProtected && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Room Password</label>
+              <input
+                type="password"
+                className="w-full px-3 py-2 border rounded-lg"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter room password"
+                minLength={4}
+                maxLength={50}
+                required={isPasswordProtected}
+                disabled={isLoading}
+              />
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               type="button"
@@ -111,7 +146,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
             </button>
             <button
               type="submit"
-              disabled={isLoading || !userName.trim()}
+              disabled={isLoading || !userName.trim() || (isPasswordProtected && !password.trim())}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
             >
               {isLoading ? (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Room } from '@planning-poker/shared';
-import { Copy, Share2, Check, Users, Clock, UserPlus } from 'lucide-react';
+import { Copy, Share2, Check, Users, Clock, UserPlus, Lock } from 'lucide-react';
 
 interface RoomInfoProps {
   room: Room;
@@ -61,14 +61,23 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
       {/* Room Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="space-y-3">
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             {room.name}
+            {room.isPasswordProtected && (
+              <Lock className="w-5 h-5 text-amber-600" />
+            )}
           </h2>
           <div className="inline-flex items-center bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl px-4 py-2 border border-primary-200">
             <span className="text-primary-700 text-sm font-medium mr-2">Room ID:</span>
             <p className="text-primary-800 text-lg font-mono font-bold">
               {room.id}
             </p>
+            {room.isPasswordProtected && (
+              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                <Lock className="w-3 h-3 mr-1" />
+                Protected
+              </span>
+            )}
           </div>
         </div>
         

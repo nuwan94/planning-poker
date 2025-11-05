@@ -17,7 +17,7 @@ const RoomPage: React.FC = () => {
   const { id: roomId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated, loginWithRedirect } = useAuth0();
-  const { room, currentUser, isLoading, authRequired, joinRoomWithUser } = useRoom(roomId || '');
+  const { room, currentUser, isLoading, authRequired, roomExists, isPasswordProtected, joinRoomWithUser } = useRoom(roomId || '');
   const { socket } = useSocket();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
@@ -29,6 +29,10 @@ const RoomPage: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  
+  // Password state for auth modal
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   
   // Story and voting state
   const [currentStory, setCurrentStory] = useState<Story | undefined>(room?.currentStory);
@@ -359,8 +363,11 @@ const RoomPage: React.FC = () => {
 
   const handleJoinAsGuest = async () => {
     if (!guestName.trim() || !joinRoomWithUser) return;
+    if (isPasswordProtected && !password.trim()) return;
 
     setIsJoining(true);
+    setPasswordError(''); // Clear any previous error
+
     try {
       const userId = generateId();
       const finalUserName = guestName.trim();
@@ -372,12 +379,21 @@ const RoomPage: React.FC = () => {
         isSpectator: false
       };
 
-      localStorage.setItem('planningPokerUser', JSON.stringify(userObj));
+      // Save user and password to localStorage
+      const userData: any = { ...userObj };
+      if (isPasswordProtected && password.trim()) {
+        userData.roomPassword = password.trim();
+      }
+      localStorage.setItem('planningPokerUser', JSON.stringify(userData));
+
       await joinRoomWithUser(userObj);
       setShowAuthModal(false);
+      setGuestName('');
+      setPassword('');
     } catch (error) {
       console.error('Join room error:', error);
-      toast.error('Failed to join room');
+      // Don't close modal, show error instead
+      setPasswordError('Invalid password. Please try again.');
     } finally {
       setIsJoining(false);
     }
@@ -394,7 +410,7 @@ const RoomPage: React.FC = () => {
     );
   }
 
-  if (!room && !authRequired) {
+  if (roomExists === false) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -714,9 +730,7 @@ const RoomPage: React.FC = () => {
                       src={user?.picture} 
                       alt={user?.name} 
                       className="w-8 h-8 rounded-full"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
+                      onError={(e) => (e.target as HTMLImageElement).style.display = 'none'}
                     />
                     <span className="font-medium">{user?.name || user?.email}</span>
                   </div>
@@ -766,13 +780,43 @@ const RoomPage: React.FC = () => {
                       onChange={(e) => setGuestName(e.target.value)}
                       placeholder="Enter your name"
                       maxLength={50}
-                      onKeyPress={(e) => e.key === 'Enter' && handleJoinAsGuest()}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && (!isPasswordProtected || password.trim())) {
+                          handleJoinAsGuest();
+                        }
+                      }}
                     />
                   </div>
+
+                  {isPasswordProtected && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Room Password</label>
+                      <div className="mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-yellow-800 text-sm">
+                          <span className="font-medium">⚠️ Password Required:</span> This room requires a password to join.
+                        </p>
+                      </div>
+                      <input
+                        type="password"
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter room password"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && guestName.trim() && password.trim()) {
+                            handleJoinAsGuest();
+                          }
+                        }}
+                      />
+                      {passwordError && (
+                        <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+                      )}
+                    </div>
+                  )}
                   
                   <button
                     onClick={handleJoinAsGuest}
-                    disabled={isJoining || !guestName.trim()}
+                    disabled={isJoining || !guestName.trim() || (isPasswordProtected && !password.trim())}
                     className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
                   >
                     {isJoining ? (
