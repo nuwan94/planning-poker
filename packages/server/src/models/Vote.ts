@@ -1,9 +1,7 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 import { Vote as SharedVote } from '@planning-poker/shared';
 
-export interface IVote extends SharedVote, Document {
-  _id: mongoose.Types.ObjectId;
-}
+export interface IVote extends SharedVote {}
 
 const VoteSchema = new Schema<IVote>({
   userId: {
@@ -18,14 +16,6 @@ const VoteSchema = new Schema<IVote>({
   submittedAt: {
     type: Date,
     default: Date.now
-  }
-}, {
-  _id: false,
-  toJSON: {
-    transform: (doc: any, ret: any) => {
-      delete ret._id;
-      return ret;
-    }
   }
 });
 
