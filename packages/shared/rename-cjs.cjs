@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const cjsDir = path.join(__dirname, 'dist', 'cjs');
+const esmDir = path.join(__dirname, 'dist');
 
 if (fs.existsSync(cjsDir)) {
   const files = fs.readdirSync(cjsDir);
@@ -28,6 +29,15 @@ if (fs.existsSync(cjsDir)) {
     
     fs.writeFileSync(filePath, content);
     console.log(`Fixed require statements in ${file}`);
+  });
+  
+  // Copy .d.ts files from ESM dist to CJS dist
+  const dtsFiles = fs.readdirSync(esmDir).filter(file => file.endsWith('.d.ts'));
+  dtsFiles.forEach(file => {
+    const srcPath = path.join(esmDir, file);
+    const destPath = path.join(cjsDir, file);
+    fs.copyFileSync(srcPath, destPath);
+    console.log(`Copied ${file} to cjs directory`);
   });
   
   console.log('CommonJS files renamed and fixed successfully');
