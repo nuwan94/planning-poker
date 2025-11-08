@@ -16,10 +16,10 @@ const HomePage: React.FC = () => {
     <div className="page-container">
       <div className="page-content max-w-7xl mx-auto">
         {/* Two Column Layout */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[80vh] py-12">
+        <div className="grid lg:grid-cols-2 gap-12 items-stretch min-h-[100vh] py-12">
           
           {/* Left Side - CTAs */}
-          <div className="space-y-8 animate-slide-up">
+          <div className="space-y-8 animate-slide-up flex flex-col justify-center">
             <div>
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
                 Planning Poker
@@ -49,9 +49,9 @@ const HomePage: React.FC = () => {
           </div>
 
           {/* Right Side - Video/GIF with 3D Tilt */}
-          <div className="relative perspective-1000 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <div className="card-elevated p-4 transform rotate-y-12 hover:rotate-y-6 transition-transform duration-500 shadow-2xl">
-              <div className="aspect-video bg-slate-100 rounded-lg overflow-hidden relative">
+          <div className="relative perspective-1000 animate-slide-up h-full flex flex-col" style={{ animationDelay: '0.2s' }}>
+            <div className="card-elevated p-6 transform rotate-y-12 hover:rotate-y-6 transition-transform duration-500 shadow-2xl flex-1 flex flex-col">
+              <div className="bg-slate-100 rounded-lg overflow-hidden relative flex-1">
                 {/* Temporary placeholder - Replace with actual video/gif */}
                 <div className="flex items-center justify-center h-full bg-gradient-to-br from-primary-100 to-purple-100">
                   <div className="text-center p-8">
