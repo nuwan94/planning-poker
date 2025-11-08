@@ -103,23 +103,24 @@ const MyRooms: React.FC<MyRoomsProps> = ({ userId }) => {
           <button
             key={room.id}
             onClick={() => handleRoomClick(room.id)}
-            className="card p-6 text-left group hover:scale-102 hover:shadow-lg transition-all duration-200 cursor-pointer"
+            className="card p-6 text-left group hover:scale-102 hover:shadow-lg transition-all duration-200 cursor-pointer relative"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-slate-900 mb-1 truncate group-hover:text-primary-600 transition-colors">
-                  {room.name}
-                </h3>
-                {room.description && (
-                  <p className="text-sm text-slate-600 line-clamp-2">
-                    {room.description}
-                  </p>
-                )}
-              </div>
-              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all flex-shrink-0 ml-2" />
+            <div className="absolute top-6 right-6">
+              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-slate-500">
+            <div className="mb-4 pr-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-1 truncate group-hover:text-primary-600 transition-colors">
+                {room.name}
+              </h3>
+              {room.description && (
+                <p className="text-sm text-slate-600 line-clamp-2 mb-4">
+                  {room.description}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-slate-500 pr-8">
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-1.5" />
                 <span>{room.participants.length} {room.participants.length === 1 ? 'member' : 'members'}</span>
@@ -131,7 +132,7 @@ const MyRooms: React.FC<MyRoomsProps> = ({ userId }) => {
             </div>
 
             {room.currentStory && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="mt-4 pt-4 border-t border-slate-200 pr-8">
                 <div className="flex items-center">
                   <div className={`w-2 h-2 rounded-full mr-2 ${room.isVotingActive ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
                   <span className="text-xs font-medium text-slate-700">

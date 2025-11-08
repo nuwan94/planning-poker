@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Room } from '@planning-poker/shared';
 import { apiClient } from '../services/apiClient';
-import { Users, Clock, ChevronRight, Loader, Trash2, X, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Users, Clock, Loader, Trash2, X, AlertTriangle, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MyRoomsPage: React.FC = () => {
@@ -161,66 +161,69 @@ const MyRoomsPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {rooms.map((room) => (
             <div
               key={room.id}
-              className="card p-6 group hover:scale-102 hover:shadow-xl transition-all duration-200 relative"
+              className="group relative"
             >
-                {/* Action buttons */}
-                <div className="absolute top-4 right-4 flex gap-2 z-10">
-                  <button
-                    onClick={(e) => copyRoomUrl(e, room.id)}
-                    className={`p-2 rounded-lg transition-all duration-200 ${
-                      copiedRoomId === room.id
-                        ? 'text-emerald-600 bg-emerald-50'
-                        : 'text-slate-400 hover:text-primary-600 hover:bg-primary-50'
-                    }`}
-                    title="Copy room link"
-                  >
-                    {copiedRoomId === room.id ? (
-                      <Check className="w-5 h-5" />
-                    ) : (
-                      <Copy className="w-5 h-5" />
-                    )}
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteClick(e, room)}
-                    disabled={deletingRoomId === room.id}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                    title="Delete room"
-                  >
-                    {deletingRoomId === room.id ? (
-                      <Loader className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Room content - clickable */}
-                <div
+                {/* Main Card */}
+                <div 
                   onClick={() => handleRoomClick(room.id)}
-                  className="cursor-pointer"
+                  className="card p-6 cursor-pointer hover:shadow-xl transition-all duration-200 border-2 border-transparent hover:border-primary-200"
                 >
-                  <div className="flex items-start justify-between mb-4 pr-10">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-bold text-slate-900 mb-2 truncate group-hover:text-primary-600 transition-colors">
+                  {/* Header with Title and Actions */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1 min-w-0 pr-3">
+                      <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-primary-600 transition-colors mb-1">
                         {room.name}
                       </h3>
                       {room.description && (
-                        <p className="text-sm text-slate-600 line-clamp-2 mb-3">
+                        <p className="text-sm text-slate-600 line-clamp-2">
                           {room.description}
                         </p>
                       )}
                     </div>
-                    <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all flex-shrink-0 ml-3" />
+                    
+                    {/* Action Buttons - Separate from click area */}
+                    <div className="flex gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => copyRoomUrl(e, room.id)}
+                        className={`p-2 rounded-lg transition-all duration-200 ${
+                          copiedRoomId === room.id
+                            ? 'bg-emerald-100 text-emerald-600'
+                            : 'text-slate-400 hover:text-primary-600 hover:bg-primary-50'
+                        }`}
+                        title="Copy room link"
+                      >
+                        {copiedRoomId === room.id ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteClick(e, room)}
+                        disabled={deletingRoomId === room.id}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-50"
+                        title="Delete room"
+                      >
+                        {deletingRoomId === room.id ? (
+                          <Loader className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Stats Row */}
                   <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
                     <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-1.5" />
-                      <span>{room.participants.length} {room.participants.length === 1 ? 'member' : 'members'}</span>
+                      <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center mr-2">
+                        <Users className="w-4 h-4 text-primary-600" />
+                      </div>
+                      <span className="font-medium">{room.participants.length}</span>
                     </div>
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-1.5" />
@@ -228,23 +231,22 @@ const MyRoomsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {room.currentStory && (
-                    <div className="pt-4 border-t border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className={`w-2 h-2 rounded-full mr-2 ${room.isVotingActive ? 'bg-green-500 animate-pulse' : 'bg-slate-300'}`} />
-                          <span className="text-sm font-medium text-slate-700">
-                            {room.isVotingActive ? 'Active voting' : 'Inactive'}
-                          </span>
-                        </div>
-                        {room.storyHistory && room.storyHistory.length > 0 && (
-                          <span className="text-xs text-slate-500">
-                            {room.storyHistory.length} completed
-                          </span>
-                        )}
+                  {/* Footer with Status and History */}
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${room.isVotingActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                        <span className="text-sm font-medium text-slate-700">
+                          {room.isVotingActive ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
+                      {room.storyHistory && room.storyHistory.length > 0 && (
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full font-medium">
+                          {room.storyHistory.length} stories
+                        </span>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
             </div>
           ))}
