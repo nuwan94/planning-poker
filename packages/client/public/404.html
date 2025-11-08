@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Planning Poker</title>
+    <script type="text/javascript">
+      // Get the path from the URL (remove the domain and trailing slash)
+      var pathSegments = window.location.pathname.split('/').filter(Boolean);
+      
+      // Reconstruct the path without the repo name if needed
+      // For GitHub Pages user/org sites, the path is /, for project sites it's /repo-name/
+      var isProjectSite = pathSegments.length > 0 && pathSegments[0] !== '';
+      
+      // Redirect to index.html with the original path as a query parameter
+      var redirectUrl = '/index.html?redirect=' + encodeURIComponent(window.location.pathname);
+      
+      window.location.replace(redirectUrl);
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
