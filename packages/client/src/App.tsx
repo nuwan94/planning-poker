@@ -5,7 +5,6 @@ import HomePage from './pages/HomePage';
 import CreateRoomPage from './pages/CreateRoomPage';
 import RoomPage from './pages/RoomPage';
 import MyRoomsPage from './pages/MyRoomsPage';
-import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import Layout from './components/Layout';
 import { SocketProvider } from './contexts/SocketContext';
@@ -20,7 +19,6 @@ const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/create-room" element={<CreateRoomPage />} />
             <Route path="/my-rooms" element={<MyRoomsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/room/:id" element={<RoomPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

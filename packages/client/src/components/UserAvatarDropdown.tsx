@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
-import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, ChevronDown } from 'lucide-react';
 
 const UserAvatarDropdown: React.FC = () => {
   const { user, isLoading, isAuthenticated, logout } = useAuth0();
-  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -112,26 +110,13 @@ const UserAvatarDropdown: React.FC = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                navigate('/settings');
+                handleLogout();
               }}
-              className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center space-x-3 transition-colors duration-150"
+              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
             >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
             </button>
-            
-            <div className="border-t border-slate-100 mt-1 pt-1">
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  handleLogout();
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3 transition-colors duration-150"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log Out</span>
-              </button>
-            </div>
           </div>
         </div>
       )}
