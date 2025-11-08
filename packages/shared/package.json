@@ -9,7 +9,7 @@
   "exports": {
     ".": {
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/cjs/index.d.ts",
         "default": "./dist/cjs/index.cjs"
       },
       "import": {
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "npm run clean && npm run build:esm && npm run build:cjs && npm run rename:cjs",
-    "build:esm": "tsc",
+    "build:esm": "tsc -p tsconfig.esm.json",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "rename:cjs": "node rename-cjs.cjs",
     "dev": "tsc --watch",

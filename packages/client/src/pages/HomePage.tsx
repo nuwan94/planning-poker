@@ -49,13 +49,13 @@ const HomePage: React.FC = () => {
           </div>
 
           {/* Right Side - Video/GIF with 3D Tilt */}
-          <div className="relative perspective-1000 animate-slide-up h-full flex flex-col" style={{ animationDelay: '0.2s' }}>
-            <div className="card-elevated p-6 transform rotate-y-12 hover:rotate-y-6 transition-transform duration-500 shadow-2xl flex-1 flex flex-col">
-              <div className="bg-slate-100 rounded-lg overflow-hidden relative flex-1">
+          <div className="relative perspective-1000 animate-slide-up flex flex-col" style={{ animationDelay: '0.2s' }}>
+            <div className="card-elevated p-6 transform rotate-y-12 hover:rotate-y-6 transition-transform duration-500 shadow-2xl max-w-md mx-auto">
+              <div className="bg-slate-100 rounded-lg overflow-hidden relative aspect-video">
                 {/* Temporary placeholder - Replace with actual video/gif */}
                 <div className="flex items-center justify-center h-full bg-gradient-to-br from-primary-100 to-purple-100">
                   <div className="text-center p-8">
-                    <div className="text-6xl mb-4">���</div>
+                    <div className="text-6xl mb-4">🎯</div>
                     <p className="text-lg font-semibold text-slate-700 mb-2">
                       Demo Video/GIF Coming Soon
                     </p>

@@ -46,6 +46,10 @@ export const SOCKET_EVENTS = {
   STORY_CREATED: 'story_created',
   STORY_UPDATED: 'story_updated',
   
+  // User status and heartbeat
+  USER_STATUS_UPDATE: 'user_status_update',
+  HEARTBEAT: 'heartbeat',
+  
   // Final estimate
   FINAL_ESTIMATE_SET: 'final_estimate_set',
   
