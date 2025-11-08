@@ -7,12 +7,14 @@ import RoomPage from './pages/RoomPage';
 import MyRoomsPage from './pages/MyRoomsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import Layout from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import { SocketProvider } from './contexts/SocketContext';
 import Auth0ProviderWithConfig from './auth/Auth0ProviderWithConfig';
 
 const App: React.FC = () => {
   return (
     <Auth0ProviderWithConfig>
+      <ScrollToTop />
       <SocketProvider>
         <Layout>
           <Routes>
