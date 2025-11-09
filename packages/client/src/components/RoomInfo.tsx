@@ -9,7 +9,7 @@ interface RoomInfoProps {
 const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
   const [copied, setCopied] = useState(false);
 
-  const roomUrl = `${window.location.origin}/room/${room.id}`;
+  const roomUrl = `${window.location.origin}/#/room/${room.id}`;
 
   const copyRoomUrl = async () => {
     try {

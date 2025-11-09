@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { generateId } from '@planning-poker/shared';
@@ -13,6 +14,7 @@ interface CreateRoomModalProps {
 
 const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) => {
   const { user, isAuthenticated } = useAuth0();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
@@ -67,7 +69,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
         }
       });
       
-      window.location.href = `/room/${room.id}`;
+      navigate(`/room/${room.id}`);
     } catch (error) {
       console.error('Create room error:', error);
       toast.error('Failed to create room');

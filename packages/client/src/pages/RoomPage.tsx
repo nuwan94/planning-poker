@@ -189,7 +189,7 @@ const RoomPage: React.FC = () => {
   const copyRoomUrl = async () => {
     if (!room) return;
     
-    const roomUrl = `${window.location.origin}/room/${room.id}`;
+    const roomUrl = `${window.location.origin}/#/room/${room.id}`;
     
     try {
       await navigator.clipboard.writeText(roomUrl);
@@ -213,7 +213,7 @@ const RoomPage: React.FC = () => {
   const shareRoom = async () => {
     if (!room) return;
     
-    const roomUrl = `${window.location.origin}/room/${room.id}`;
+    const roomUrl = `${window.location.origin}/#/room/${room.id}`;
     
     if (navigator.share) {
       try {

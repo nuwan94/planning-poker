@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { generateId } from '@planning-poker/shared';
@@ -13,6 +14,7 @@ interface JoinRoomModalProps {
 
 const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
   const { user, isAuthenticated } = useAuth0();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const [roomId, setRoomId] = useState('');
@@ -77,7 +79,7 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose }) => {
         roomPassword: isRoomPasswordProtected ? password : undefined
       }));
 
-      window.location.href = `/room/${finalRoomId}`;
+      navigate(`/room/${finalRoomId}`);
     } catch (error) {
       console.error('Join room error:', error);
       toast.error('Failed to join room');

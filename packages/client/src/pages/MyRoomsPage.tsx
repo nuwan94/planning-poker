@@ -85,7 +85,7 @@ const MyRoomsPage: React.FC = () => {
   const copyRoomUrl = async (e: React.MouseEvent, roomId: string) => {
     e.stopPropagation(); // Prevent room card click
     
-    const roomUrl = `${window.location.origin}/room/${roomId}`;
+    const roomUrl = `${window.location.origin}/#/room/${roomId}`;
     
     try {
       await navigator.clipboard.writeText(roomUrl);
