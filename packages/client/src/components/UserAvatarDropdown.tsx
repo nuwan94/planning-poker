@@ -16,6 +16,9 @@ const UserAvatarDropdown: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('planningPokerUser');
+    
     logout({
       logoutParams: {
         returnTo: globalThis.location.origin,

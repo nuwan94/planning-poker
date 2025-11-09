@@ -6,6 +6,9 @@ const LogoutButton: React.FC = () => {
   const { logout, isLoading } = useAuth0();
 
   const handleLogout = () => {
+    // Clear user data from localStorage
+    localStorage.removeItem('planningPokerUser');
+    
     logout({
       logoutParams: {
         returnTo: globalThis.location.origin,
