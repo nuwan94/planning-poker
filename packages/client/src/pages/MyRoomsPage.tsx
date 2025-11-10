@@ -19,25 +19,44 @@ const MyRoomsPage: React.FC = () => {
     // Get current user from localStorage
     const savedUser = localStorage.getItem('planningPokerUser');
     if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      setCurrentUserId(userData.id);
+      try {
+        const userData = JSON.parse(savedUser);
+        console.log('[MyRoomsPage] Loaded user data:', userData);
+        setCurrentUserId(userData.id);
+      } catch (error) {
+        console.warn('[MyRoomsPage] Failed to parse saved user data:', error);
+        navigate('/');
+      }
     } else {
       // If no user found, redirect to home
+      console.log('[MyRoomsPage] No saved user data found');
       navigate('/');
     }
   }, [navigate]);
 
   useEffect(() => {
     const fetchMyRooms = async () => {
-      if (!currentUserId) return;
+      if (!currentUserId || currentUserId === 'undefined' || currentUserId === 'null') {
+        console.log('[MyRoomsPage] Invalid currentUserId:', currentUserId);
+        setError('User session expired. Please log in again.');
+        return;
+      }
 
+      console.log('[MyRoomsPage] Fetching rooms for owner:', currentUserId);
       try {
         setIsLoading(true);
         setError(null);
         const ownedRooms = await apiClient.getRoomsByOwner(currentUserId);
+        console.log('[MyRoomsPage] Successfully fetched rooms:', ownedRooms);
         setRooms(ownedRooms);
       } catch (err) {
-        console.error('Failed to fetch owned rooms:', err);
+        console.error('[MyRoomsPage] Failed to fetch owned rooms:', err);
+        const error = err as Error;
+        console.error('[MyRoomsPage] Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
         setError('Failed to load your rooms');
       } finally {
         setIsLoading(false);

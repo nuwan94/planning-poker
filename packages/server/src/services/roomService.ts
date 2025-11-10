@@ -98,10 +98,36 @@ export class RoomService {
   }
 
   async getRoomsByOwner(ownerId: string): Promise<IRoom[]> {
-    console.log(`[RoomService] Getting rooms for owner: ${ownerId}`);
-    const rooms = await Room.find({ ownerId }).sort({ createdAt: -1 });
-    console.log(`[RoomService] Found ${rooms.length} rooms for owner ${ownerId}`);
-    return Promise.all(rooms.map(room => this.populateRoom(room)));
+    try {
+      const rooms = await Room.find({ ownerId }).sort({ createdAt: -1 });
+      
+      const populatedRooms = [];
+      for (const room of rooms) {
+        try {
+          const populatedRoom = await this.populateRoom(room);
+          populatedRooms.push(populatedRoom);
+        } catch (error) {
+          populatedRooms.push({
+            id: room.id,
+            name: room.name,
+            description: room.description,
+            ownerId: room.ownerId,
+            participants: [],
+            currentStory: undefined,
+            storyHistory: [],
+            cardDeckId: room.cardDeckId || 'fibonacci',
+            isVotingActive: room.isVotingActive,
+            isPasswordProtected: !!room.password,
+            createdAt: room.createdAt,
+            updatedAt: room.updatedAt
+          });
+        }
+      }
+      
+      return populatedRooms;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async updateRoom(roomId: string, updates: Partial<Pick<IRoom, 'name' | 'description' | 'cardDeckId'>>): Promise<IRoom | null> {

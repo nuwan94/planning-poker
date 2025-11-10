@@ -69,6 +69,8 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
         }
       });
       
+      // Close the modal before navigating
+      onClose();
       navigate(`/room/${room.id}`);
     } catch (error) {
       console.error('Create room error:', error);

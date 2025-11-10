@@ -152,8 +152,21 @@ const RoomPage: React.FC = () => {
   useEffect(() => {
     if (authRequired) {
       setShowAuthModal(true);
+      
+      // Pre-fill guest name from saved user data if available
+      const savedUser = localStorage.getItem('planningPokerUser');
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          if (userData.name && !guestName) {
+            setGuestName(userData.name);
+          }
+        } catch (error) {
+          console.warn('Failed to parse saved user data:', error);
+        }
+      }
     }
-  }, [authRequired]);
+  }, [authRequired, guestName]);
 
   const isOwner = room && currentUser && room.ownerId === currentUser.id;
 
@@ -332,7 +345,19 @@ const RoomPage: React.FC = () => {
   const handleJoinAsAuthenticated = async () => {
     if (!isAuthenticated || !user || !joinRoomWithUser) return;
 
+    // Check if password is required for authenticated users too
+    if (isPasswordProtected) {
+      // For authenticated users, we still need password for protected rooms
+      // The password should be entered in the modal
+      if (!password.trim()) {
+        setPasswordError('Password is required for this room');
+        return;
+      }
+    }
+
     setIsJoining(true);
+    setPasswordError(''); // Clear any previous error
+    
     try {
       // Try to get username from custom claim first, then fallback to standard claims
       const namespace = 'https://planning-poker.app';
@@ -350,12 +375,19 @@ const RoomPage: React.FC = () => {
         isSpectator: false
       };
 
-      localStorage.setItem('planningPokerUser', JSON.stringify(userObj));
+      // Save user and password to localStorage
+      const userData: any = { ...userObj };
+      if (isPasswordProtected && password.trim()) {
+        userData.roomPassword = password.trim();
+      }
+      localStorage.setItem('planningPokerUser', JSON.stringify(userData));
+
       await joinRoomWithUser(userObj);
       setShowAuthModal(false);
+      setPassword('');
     } catch (error) {
       console.error('Join room error:', error);
-      toast.error('Failed to join room');
+      setPasswordError('Invalid password. Please try again.');
     } finally {
       setIsJoining(false);
     }
@@ -734,9 +766,36 @@ const RoomPage: React.FC = () => {
                     />
                     <span className="font-medium">{user?.name || user?.email}</span>
                   </div>
+                  
+                  {isPasswordProtected && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-2">Room Password</label>
+                      <div className="mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-yellow-800 text-sm">
+                          <span className="font-medium">⚠️ Password Required:</span> This room requires a password to join.
+                        </p>
+                      </div>
+                      <input
+                        type="password"
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter room password"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && password.trim()) {
+                            handleJoinAsAuthenticated();
+                          }
+                        }}
+                      />
+                      {passwordError && (
+                        <p className="text-red-500 text-sm mt-1">{passwordError}</p>
+                      )}
+                    </div>
+                  )}
+                  
                   <button
                     onClick={handleJoinAsAuthenticated}
-                    disabled={isJoining}
+                    disabled={isJoining || (isPasswordProtected && !password.trim())}
                     className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
                   >
                     {isJoining ? (

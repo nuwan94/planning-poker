@@ -12,34 +12,22 @@ export const useRoom = (roomId: string) => {
   const [authRequired, setAuthRequired] = useState(false);
   const [roomExists, setRoomExists] = useState<boolean | null>(null);
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [hasJoinedRoom, setHasJoinedRoom] = useState(false);
 
   useEffect(() => {
     if (!roomId || !socket || !isConnected) {
       return;
     }
 
-    const savedUser = localStorage.getItem('planningPokerUser');
-    if (!savedUser) {
-      setAuthRequired(true);
-      setIsLoading(false);
-      return;
-    }
-
-    setAuthRequired(false);
-
-    const userData = JSON.parse(savedUser);
-    const user: User = {
-      id: userData.id,
-      name: userData.name,
-      avatarUrl: userData.avatarUrl,
-      isSpectator: false
-    };
-    setCurrentUser(user);
-
     const handleRoomJoined = (joinedRoom: Room) => {
       setRoom(joinedRoom);
       setIsLoading(false);
-      toast.success(`Joined ${joinedRoom.name}`);
+      
+      // Only show toast if we haven't joined before
+      if (!hasJoinedRoom) {
+        setHasJoinedRoom(true);
+        toast.success(`Joined ${joinedRoom.name}`);
+      }
     };
 
     const handleRoomUpdated = (updatedRoom: Room) => {
@@ -89,16 +77,36 @@ export const useRoom = (roomId: string) => {
         setRoomExists(true);
         setIsPasswordProtected(roomData.isPasswordProtected || false);
 
-        // Check if password is required
+        // Check if authentication is required
         const savedUser = localStorage.getItem('planningPokerUser');
         const hasSavedPassword = savedUser ? JSON.parse(savedUser).roomPassword : false;
 
-        if (roomData.isPasswordProtected && !hasSavedPassword) {
-          // Don't attempt join - let the UI handle password prompt
-          console.log('[useRoom] Room requires password, waiting for user input');
+        if (!savedUser) {
+          // No saved user - require authentication
+          setAuthRequired(true);
           setIsLoading(false);
           return;
         }
+
+        if (roomData.isPasswordProtected && !hasSavedPassword) {
+          // Room requires password but user doesn't have one saved - require authentication
+          console.log('[useRoom] Room requires password, showing auth modal');
+          setAuthRequired(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // User exists and has required password (or room doesn't need password) - proceed with join
+        setAuthRequired(false);
+
+        const userData = JSON.parse(savedUser);
+        const user: User = {
+          id: userData.id,
+          name: userData.name,
+          avatarUrl: userData.avatarUrl,
+          isSpectator: false
+        };
+        setCurrentUser(user);
 
         // Room is not password-protected or we have a saved password, attempt join
         socket.emit(SOCKET_EVENTS.JOIN_ROOM, roomId, user, hasSavedPassword || undefined);
@@ -126,11 +134,21 @@ export const useRoom = (roomId: string) => {
       socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
       socket.off(SOCKET_EVENTS.ERROR, handleError);
       socket.off(SOCKET_EVENTS.USER_STATUS_UPDATE, handleUserStatusUpdate);
-      socket.emit(SOCKET_EVENTS.LEAVE_ROOM, roomId, user.id);
+      
+      // Only emit leave room if we have a current user
+      if (currentUser) {
+        socket.emit(SOCKET_EVENTS.LEAVE_ROOM, roomId, currentUser.id);
+      }
+      
+      // Reset join flag when cleaning up
+      setHasJoinedRoom(false);
     };
   }, [socket, isConnected, roomId]);
 
-  // Send periodic heartbeats to indicate user is active
+  // Reset join flag when roomId changes
+  useEffect(() => {
+    setHasJoinedRoom(false);
+  }, [roomId]);
   useEffect(() => {
     if (!currentUser || !socket || !isConnected) {
       return;
