@@ -11,8 +11,7 @@ export interface IStory extends Omit<SharedStory, 'id'>, Document {
 const StorySchema = new Schema<IStory>({
   id: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   title: {
     type: String,

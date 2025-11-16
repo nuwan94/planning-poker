@@ -18,8 +18,7 @@ export interface IRoom extends Document {
 const RoomSchema = new Schema<IRoom>({
   id: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   name: {
     type: String,

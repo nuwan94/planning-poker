@@ -11,8 +11,7 @@ export interface IUser extends Omit<SharedUser, 'id'>, Document {
 const UserSchema = new Schema<IUser>({
   id: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   name: {
     type: String,
