@@ -11,6 +11,7 @@ export interface IRoom extends Document {
   cardDeckId?: string;
   isVotingActive: boolean;
   password?: string; // Encrypted password for protected rooms
+  timerDuration?: number; // Default timer duration in seconds
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +55,10 @@ const RoomSchema = new Schema<IRoom>({
   password: {
     type: String,
     default: null
+  },
+  timerDuration: {
+    type: Number,
+    default: 300
   }
 }, {
   timestamps: true,

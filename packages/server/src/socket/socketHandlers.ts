@@ -1,11 +1,13 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { SOCKET_EVENTS, User, Vote } from '@planning-poker/shared';
+import { SOCKET_EVENTS, User, Vote, TimerState } from '@planning-poker/shared';
 import { roomService } from '../services/roomService';
 import { storyService } from '../services/storyService';
 
 const userSockets = new Map<string, Socket>();
 const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
 const userRooms = new Map<string, string>();
+const roomTimers = new Map<string, NodeJS.Timeout>();
+const timerStates = new Map<string, TimerState>();
 
 export const setupSocketHandlers = (io: SocketIOServer) => {
   console.log('[Socket] Setting up Socket.IO handlers');
@@ -276,6 +278,164 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
       } catch (error: any) {
         console.error('[Socket] Error in FINAL_ESTIMATE_SET:', error);
         socket.emit(SOCKET_EVENTS.ERROR, { message: error.message || 'Failed to set final estimate' });
+      }
+    });
+
+    // Timer event handlers
+    socket.on(SOCKET_EVENTS.START_TIMER, async (roomId: string, duration: number) => {
+      console.log(`[Socket] START_TIMER: ${duration}s for room ${roomId}`);
+      
+      try {
+        // Clear any existing timer for this room
+        if (roomTimers.has(roomId)) {
+          clearInterval(roomTimers.get(roomId)!);
+          roomTimers.delete(roomId);
+        }
+
+        // Initialize timer state
+        const timerState: TimerState = {
+          duration,
+          remaining: duration,
+          isActive: true,
+          isPaused: false,
+          startedAt: new Date()
+        };
+        timerStates.set(roomId, timerState);
+
+        // Update story with timer state
+        const room = await roomService.getRoomById(roomId);
+        if (room?.currentStory) {
+          const story = await storyService.updateStory(room.currentStory.id, {
+            timer: timerState
+          });
+          if (story) {
+            io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, timerState);
+            console.log(`[Socket] Timer started for room ${roomId}`);
+          }
+        }
+
+        // Start countdown
+        const interval = setInterval(async () => {
+          const state = timerStates.get(roomId);
+          if (!state || state.isPaused) return;
+
+          state.remaining -= 1;
+
+          if (state.remaining <= 0) {
+            // Timer complete
+            clearInterval(interval);
+            roomTimers.delete(roomId);
+            state.isActive = false;
+            state.remaining = 0;
+            timerStates.set(roomId, state);
+
+            io.to(roomId).emit(SOCKET_EVENTS.TIMER_COMPLETE);
+            io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, state);
+            console.log(`[Socket] Timer completed for room ${roomId}`);
+
+            // Update story to reflect timer completion
+            const room = await roomService.getRoomById(roomId);
+            if (room?.currentStory) {
+              await storyService.updateStory(room.currentStory.id, {
+                timer: state
+              });
+            }
+          } else {
+            // Emit tick
+            timerStates.set(roomId, state);
+            io.to(roomId).emit(SOCKET_EVENTS.TIMER_TICK, state.remaining);
+            io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, state);
+          }
+        }, 1000);
+
+        roomTimers.set(roomId, interval);
+      } catch (error) {
+        console.error('[Socket] Error in START_TIMER:', error);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to start timer' });
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.PAUSE_TIMER, async (roomId: string) => {
+      console.log(`[Socket] PAUSE_TIMER: room ${roomId}`);
+      
+      try {
+        const state = timerStates.get(roomId);
+        if (state && state.isActive) {
+          state.isPaused = true;
+          timerStates.set(roomId, state);
+          io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, state);
+          console.log(`[Socket] Timer paused for room ${roomId}`);
+
+          // Update story with paused timer state
+          const room = await roomService.getRoomById(roomId);
+          if (room?.currentStory) {
+            await storyService.updateStory(room.currentStory.id, {
+              timer: state
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[Socket] Error in PAUSE_TIMER:', error);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to pause timer' });
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.RESUME_TIMER, async (roomId: string) => {
+      console.log(`[Socket] RESUME_TIMER: room ${roomId}`);
+      
+      try {
+        const state = timerStates.get(roomId);
+        if (state && state.isActive && state.isPaused) {
+          state.isPaused = false;
+          timerStates.set(roomId, state);
+          io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, state);
+          console.log(`[Socket] Timer resumed for room ${roomId}`);
+
+          // Update story with resumed timer state
+          const room = await roomService.getRoomById(roomId);
+          if (room?.currentStory) {
+            await storyService.updateStory(room.currentStory.id, {
+              timer: state
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[Socket] Error in RESUME_TIMER:', error);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to resume timer' });
+      }
+    });
+
+    socket.on(SOCKET_EVENTS.STOP_TIMER, async (roomId: string) => {
+      console.log(`[Socket] STOP_TIMER: room ${roomId}`);
+      
+      try {
+        // Clear interval
+        if (roomTimers.has(roomId)) {
+          clearInterval(roomTimers.get(roomId)!);
+          roomTimers.delete(roomId);
+        }
+
+        // Clear state
+        const state = timerStates.get(roomId);
+        if (state) {
+          state.isActive = false;
+          state.remaining = 0;
+          timerStates.set(roomId, state);
+          io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, state);
+          timerStates.delete(roomId);
+          console.log(`[Socket] Timer stopped for room ${roomId}`);
+
+          // Update story to clear timer
+          const room = await roomService.getRoomById(roomId);
+          if (room?.currentStory) {
+            await storyService.updateStory(room.currentStory.id, {
+              timer: undefined
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[Socket] Error in STOP_TIMER:', error);
+        socket.emit(SOCKET_EVENTS.ERROR, { message: 'Failed to stop timer' });
       }
     });
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { generateId } from '@planning-poker/shared';
+import { generateId, TIMER } from '@planning-poker/shared';
 import toast from 'react-hot-toast';
 import { apiClient } from '../services/apiClient';
 
@@ -19,6 +19,8 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
   const [userName, setUserName] = useState('');
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [password, setPassword] = useState('');
+  const [timerDuration, setTimerDuration] = useState<number>(TIMER.DEFAULT_DURATION);
+  const [enableTimer, setEnableTimer] = useState(true);
 
   // Auto-fill user name if authenticated
   useEffect(() => {
@@ -61,6 +63,7 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
       const room = await apiClient.createRoom({
         name: 'Planning Session',
         password: isPasswordProtected ? password : undefined,
+        timerDuration: enableTimer ? timerDuration : 0,
         owner: {
           id: userId,
           name: finalUserName,
@@ -138,6 +141,57 @@ const CreateRoomModal: React.FC<CreateRoomModalProps> = ({ isOpen, onClose }) =>
               />
             </div>
           )}
+
+          <div className="border-t pt-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <input
+                type="checkbox"
+                id="enableTimer"
+                checked={enableTimer}
+                onChange={(e) => setEnableTimer(e.target.checked)}
+                disabled={isLoading}
+                className="rounded"
+              />
+              <label htmlFor="enableTimer" className="text-sm font-medium">
+                Enable voting timer by default
+              </label>
+            </div>
+
+            {enableTimer && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Default Timer Duration: {Math.floor(timerDuration / 60)}:{(timerDuration % 60).toString().padStart(2, '0')}
+                </label>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  {TIMER.PRESET_DURATIONS.map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      onClick={() => setTimerDuration(preset.value)}
+                      disabled={isLoading}
+                      className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                        timerDuration === preset.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="range"
+                  min={TIMER.MIN_DURATION}
+                  max={TIMER.MAX_DURATION}
+                  step={30}
+                  value={timerDuration}
+                  onChange={(e) => setTimerDuration(parseInt(e.target.value))}
+                  disabled={isLoading}
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-3">
             <button

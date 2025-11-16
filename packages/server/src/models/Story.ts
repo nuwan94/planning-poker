@@ -39,6 +39,10 @@ const StorySchema = new Schema<IStory>({
     type: Boolean,
     default: false
   },
+  timer: {
+    type: Object,
+    required: false
+  },
   roomId: {
     type: String,
     required: true

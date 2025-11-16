@@ -36,7 +36,7 @@ export class StoryService {
     return stories.map(story => story.toJSON() as IStory);
   }
 
-  async updateStory(storyId: string, updates: Partial<Pick<IStory, 'title' | 'description' | 'acceptanceCriteria' | 'finalEstimate'>>): Promise<IStory | null> {
+  async updateStory(storyId: string, updates: Partial<Pick<IStory, 'title' | 'description' | 'acceptanceCriteria' | 'finalEstimate' | 'timer'>>): Promise<IStory | null> {
     const story = await Story.findOneAndUpdate(
       { id: storyId },
       updates,

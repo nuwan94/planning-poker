@@ -46,6 +46,15 @@ export const SOCKET_EVENTS = {
   STORY_CREATED: 'story_created',
   STORY_UPDATED: 'story_updated',
   
+  // Timer
+  START_TIMER: 'start_timer',
+  PAUSE_TIMER: 'pause_timer',
+  RESUME_TIMER: 'resume_timer',
+  STOP_TIMER: 'stop_timer',
+  TIMER_TICK: 'timer_tick',
+  TIMER_COMPLETE: 'timer_complete',
+  TIMER_UPDATED: 'timer_updated',
+  
   // User status and heartbeat
   USER_STATUS_UPDATE: 'user_status_update',
   HEARTBEAT: 'heartbeat',
@@ -84,4 +93,21 @@ export const VALIDATION = {
   STORY_DESCRIPTION_MAX_LENGTH: 1000,
   USER_NAME_MAX_LENGTH: 50,
   MAX_PARTICIPANTS: 20
+} as const;
+
+// Timer constants
+export const TIMER = {
+  DEFAULT_DURATION: 300, // 5 minutes in seconds
+  MIN_DURATION: 30, // 30 seconds
+  MAX_DURATION: 3600, // 1 hour
+  WARNING_THRESHOLD: 30, // Show warning when 30 seconds remain
+  TICK_INTERVAL: 1000, // Update every second
+  PRESET_DURATIONS: [
+    { label: '1 min', value: 60 },
+    { label: '2 min', value: 120 },
+    { label: '3 min', value: 180 },
+    { label: '5 min', value: 300 },
+    { label: '10 min', value: 600 },
+    { label: '15 min', value: 900 }
+  ]
 } as const;

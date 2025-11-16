@@ -19,6 +19,7 @@ export interface Room {
   cardDeckId?: string;
   isVotingActive: boolean;
   isPasswordProtected?: boolean; // Indicates if room has password protection
+  timerDuration?: number; // Default timer duration in seconds (0 = disabled)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,7 +33,17 @@ export interface Story {
   finalEstimate?: string;
   votes: Vote[];
   isRevealed: boolean;
+  timer?: TimerState;
   createdAt: Date;
+}
+
+// Timer related types
+export interface TimerState {
+  duration: number; // Total duration in seconds
+  remaining: number; // Remaining time in seconds
+  isActive: boolean;
+  isPaused: boolean;
+  startedAt?: Date;
 }
 
 // Vote related types
@@ -66,6 +77,15 @@ export interface SocketEvents {
   clearVotes: () => void;
   votesCleared: () => void;
   
+  // Timer events
+  startTimer: (duration: number) => void;
+  pauseTimer: () => void;
+  resumeTimer: () => void;
+  stopTimer: () => void;
+  timerTick: (remaining: number) => void;
+  timerComplete: () => void;
+  timerUpdated: (timer: TimerState) => void;
+  
   // Story events
   updateStory: (story: Partial<Story>) => void;
   storyUpdated: (story: Story) => void;
@@ -89,6 +109,7 @@ export interface CreateRoomRequest {
   description?: string;
   cardDeckId?: string;
   password?: string; // Optional password for protected rooms
+  timerDuration?: number; // Default timer duration in seconds (0 = disabled)
   owner?: User;
 }
 
@@ -96,6 +117,7 @@ export interface UpdateRoomRequest {
   name?: string;
   description?: string;
   cardDeckId?: string;
+  timerDuration?: number;
 }
 
 // Room join types
@@ -118,4 +140,5 @@ export interface UpdateStoryRequest {
   description?: string;
   acceptanceCriteria?: string[];
   finalEstimate?: string;
+  timer?: TimerState;
 }

@@ -16,6 +16,7 @@ A real-time Planning Poker web application built with the MERN stack (MongoDB, E
 ## ✨ Features
 
 - **Real-time Collaboration**: Vote on stories simultaneously with your team using Socket.IO
+- **Voting Timer**: ⏱️ Time-box estimation rounds with configurable countdown timers (NEW!)
 - **Multiple Card Decks**: Choose from Fibonacci, T-shirt sizes, Modified Fibonacci, or Powers of 2
 - **Room Management**: Create and join rooms with unique IDs
 - **Vote Reveal**: Synchronized vote revealing and clearing

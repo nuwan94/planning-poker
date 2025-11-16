@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
-import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck } from '@planning-poker/shared';
+import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck, TimerState } from '@planning-poker/shared';
 import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2, Loader2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ import StoryControls from '../components/StoryControls';
 import VotingPanel from '../components/VotingPanel';
 import VotingResults from '../components/VotingResults';
 import StoryHistory from '../components/StoryHistory';
+import VotingTimer from '../components/VotingTimer';
 
 const RoomPage: React.FC = () => {
   const { id: roomId } = useParams<{ id: string }>();
@@ -39,6 +40,7 @@ const RoomPage: React.FC = () => {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [isVotingActive, setIsVotingActive] = useState(false);
   const [areVotesRevealed, setAreVotesRevealed] = useState(false);
+  const [timerState, setTimerState] = useState<TimerState | undefined>(currentStory?.timer);
 
   // Debug: Log room data to verify avatarUrl is present
   useEffect(() => {
@@ -129,6 +131,16 @@ const RoomPage: React.FC = () => {
       // This handler is just for logging purposes
     };
 
+    const handleTimerUpdated = (timer: TimerState) => {
+      console.log('[RoomPage] Timer updated:', timer);
+      setTimerState(timer);
+    };
+
+    const handleTimerComplete = () => {
+      console.log('[RoomPage] Timer completed');
+      toast.success('Time\'s up!', { icon: '⏰' });
+    };
+
     socket.on(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
     socket.on(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
     socket.on(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
@@ -136,6 +148,8 @@ const RoomPage: React.FC = () => {
     socket.on(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
     socket.on(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
     socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
+    socket.on(SOCKET_EVENTS.TIMER_UPDATED, handleTimerUpdated);
+    socket.on(SOCKET_EVENTS.TIMER_COMPLETE, handleTimerComplete);
 
     return () => {
       socket.off(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
@@ -145,6 +159,8 @@ const RoomPage: React.FC = () => {
       socket.off(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
       socket.off(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
       socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
+      socket.off(SOCKET_EVENTS.TIMER_UPDATED, handleTimerUpdated);
+      socket.off(SOCKET_EVENTS.TIMER_COMPLETE, handleTimerComplete);
     };
   }, [socket, roomId]);
 
@@ -339,6 +355,31 @@ const RoomPage: React.FC = () => {
     if (!socket || !roomId || !currentUser || !isOwner) return;
     console.log('[RoomPage] Removing user:', userIdToRemove, 'from room:', roomId);
     socket.emit(SOCKET_EVENTS.REMOVE_USER, roomId, userIdToRemove, currentUser.id);
+  };
+
+  // Timer handlers
+  const handleStartTimer = (duration: number) => {
+    if (!socket || !roomId) return;
+    console.log('[RoomPage] Starting timer:', duration, 'seconds');
+    socket.emit(SOCKET_EVENTS.START_TIMER, roomId, duration);
+  };
+
+  const handlePauseTimer = () => {
+    if (!socket || !roomId) return;
+    console.log('[RoomPage] Pausing timer');
+    socket.emit(SOCKET_EVENTS.PAUSE_TIMER, roomId);
+  };
+
+  const handleResumeTimer = () => {
+    if (!socket || !roomId) return;
+    console.log('[RoomPage] Resuming timer');
+    socket.emit(SOCKET_EVENTS.RESUME_TIMER, roomId);
+  };
+
+  const handleStopTimer = () => {
+    if (!socket || !roomId) return;
+    console.log('[RoomPage] Stopping timer');
+    socket.emit(SOCKET_EVENTS.STOP_TIMER, roomId);
   };
 
   // Authentication handlers
@@ -722,6 +763,18 @@ const RoomPage: React.FC = () => {
             })}
               </div>
             </div>
+
+            {/* Voting Timer */}
+            {currentStory && isVotingActive && !areVotesRevealed && (
+              <VotingTimer
+                timer={timerState}
+                onStart={handleStartTimer}
+                onPause={handlePauseTimer}
+                onResume={handleResumeTimer}
+                onStop={handleStopTimer}
+                isOwner={!!isOwner}
+              />
+            )}
 
             {/* Voting Panel */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
