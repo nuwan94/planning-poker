@@ -186,7 +186,7 @@ export const useRoom = (roomId: string) => {
       const handleRoomJoined = (joinedRoom: Room) => {
         setRoom(joinedRoom);
         setIsLoading(false);
-        toast.success(`Joined ${joinedRoom.name}`);
+        // Don't show toast here - the main handler will show it
         resolve();
       };
 
