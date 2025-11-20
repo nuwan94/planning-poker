@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Users, ArrowRight, Loader2 } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
+import Button from '../components/Button';
 
 const CreateRoomPage: React.FC = () => {
   const navigate = useNavigate();
@@ -120,19 +121,20 @@ const CreateRoomPage: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => navigate('/')}
                 disabled={isLoading}
-                className="btn-secondary flex-1"
+                className="flex-1"
               >
                 Cancel
-              </button>
-              
-              <button
+              </Button>
+
+              <Button
                 type="submit"
                 disabled={isLoading || !formData.name.trim()}
-                className="btn-primary flex-1"
+                className="flex-1"
               >
                 {isLoading ? (
                   <>
@@ -145,7 +147,7 @@ const CreateRoomPage: React.FC = () => {
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
 

@@ -3,16 +3,182 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
-import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck, TimerState } from '@planning-poker/shared';
-import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2, Loader2 } from 'lucide-react';
+import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck, TimerState, TIMER } from '@planning-poker/shared';
+import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2, Loader2, Clock, Pause, Play, Square } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 import Avatar from '../components/Avatar';
 import StoryControls from '../components/StoryControls';
-import VotingPanel from '../components/VotingPanel';
 import VotingResults from '../components/VotingResults';
 import StoryHistory from '../components/StoryHistory';
-import VotingTimer from '../components/VotingTimer';
+import Button from '../components/Button';
+
+interface TimerIconButtonProps {
+  timer?: TimerState;
+  onStart: (duration: number) => void;
+  onPause: () => void;
+  onResume: () => void;
+  onStop: () => void;
+  isOwner: boolean;
+}
+
+const TimerIconButton: React.FC<TimerIconButtonProps> = ({
+  timer,
+  onStart,
+  onPause,
+  onResume,
+  onStop,
+  isOwner
+}) => {
+  const [showTimerModal, setShowTimerModal] = useState(false);
+
+  if (!isOwner && !timer?.isActive) {
+    return null; // Don't show anything for non-owners when no timer is active
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-2">
+        {/* Timer Display/Icon */}
+        {timer?.isActive ? (
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-3 py-1.5">
+            <Clock className="w-4 h-4 text-slate-600" />
+            <span className="text-sm font-mono font-medium text-slate-700">
+              {Math.floor(timer.remaining / 60)}:{(timer.remaining % 60).toString().padStart(2, '0')}
+            </span>
+            <div className="flex items-center gap-0.5 ml-1">
+              {timer.isPaused ? (
+                <button
+                  onClick={onResume}
+                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                  title="Resume timer"
+                >
+                  <Play className="w-3 h-3" />
+                </button>
+              ) : (
+                <button
+                  onClick={onPause}
+                  className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                  title="Pause timer"
+                >
+                  <Pause className="w-3 h-3" />
+                </button>
+              )}
+              <button
+                onClick={onStop}
+                className="p-1 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                title="Stop timer"
+              >
+                <Square className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          isOwner && (
+            <Button
+              onClick={() => setShowTimerModal(true)}
+              className="flex items-center gap-1.5"
+              title="Start timer"
+            >
+              <Clock className="w-4 h-4" />
+              Timer
+            </Button>
+          )
+        )}
+      </div>
+
+      {/* Timer Modal */}
+      {showTimerModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Start Voting Timer</h3>
+              <button
+                onClick={() => setShowTimerModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <TimerModalContent onStart={onStart} onClose={() => setShowTimerModal(false)} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+interface TimerModalContentProps {
+  onStart: (duration: number) => void;
+  onClose: () => void;
+}
+
+const TimerModalContent: React.FC<TimerModalContentProps> = ({ onStart, onClose }) => {
+  const [customDuration, setCustomDuration] = useState('');
+
+  const handleStartTimer = (duration: number) => {
+    onStart(duration);
+    onClose();
+  };
+
+  const handleCustomStart = () => {
+    const duration = parseInt(customDuration);
+    if (duration >= TIMER.MIN_DURATION && duration <= TIMER.MAX_DURATION) {
+      handleStartTimer(duration);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Preset durations */}
+      <div>
+        <h4 className="text-sm font-medium text-slate-700 mb-3">Quick Start</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {TIMER.PRESET_DURATIONS.map((preset: any) => (
+            <button
+              key={preset.value}
+              onClick={() => handleStartTimer(preset.value)}
+              className="px-4 py-3 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border border-transparent transition-all"
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom duration */}
+      <div className="border-t border-slate-200 pt-4">
+        <h4 className="text-sm font-medium text-slate-700 mb-3">Custom Duration</h4>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            min={TIMER.MIN_DURATION}
+            max={TIMER.MAX_DURATION}
+            value={customDuration}
+            onChange={(e) => setCustomDuration(e.target.value)}
+            placeholder={`${TIMER.MIN_DURATION}-${TIMER.MAX_DURATION} seconds`}
+            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <button
+            onClick={handleCustomStart}
+            disabled={
+              !customDuration ||
+              parseInt(customDuration) < TIMER.MIN_DURATION ||
+              parseInt(customDuration) > TIMER.MAX_DURATION
+            }
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+          >
+            Start
+          </button>
+        </div>
+        <p className="text-xs text-slate-500 mt-1">
+          Enter duration in seconds ({TIMER.MIN_DURATION}-{TIMER.MAX_DURATION})
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const RoomPage: React.FC = () => {
   const { id: roomId } = useParams<{ id: string }>();
@@ -593,6 +759,21 @@ const RoomPage: React.FC = () => {
                 )}
               </div>
             </div>
+            
+            {/* Timer - Show when there's an active story */}
+            {currentStory && (
+              <div className="flex items-center">
+                <TimerIconButton
+                  timer={timerState}
+                  onStart={handleStartTimer}
+                  onPause={handlePauseTimer}
+                  onResume={handleResumeTimer}
+                  onStop={handleStopTimer}
+                  isOwner={isOwner || false}
+                />
+              </div>
+            )}
+            
             <div className="flex items-center gap-2">
               <button
                 onClick={copyRoomUrl}
@@ -649,6 +830,9 @@ const RoomPage: React.FC = () => {
               onRevealVotes={handleRevealVotes}
               onClearVotes={handleClearVotes}
               onUpdateStory={handleUpdateStory}
+              selectedDeck={room.cardDeckId || 'fibonacci'}
+              currentVote={votes.find(v => v.userId === currentUser?.id)?.value || null}
+              onVote={handleVote}
             />
             
             {/* Voting Results */}
@@ -762,40 +946,11 @@ const RoomPage: React.FC = () => {
               );
             })}
               </div>
-            </div>
-
-            {/* Voting Timer */}
-            {currentStory && isVotingActive && !areVotesRevealed && (
-              <VotingTimer
-                timer={timerState}
-                onStart={handleStartTimer}
-                onPause={handlePauseTimer}
-                onResume={handleResumeTimer}
-                onStop={handleStopTimer}
-                isOwner={!!isOwner}
-              />
-            )}
-
-            {/* Voting Panel */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              {currentStory ? (
-                <VotingPanel
-                  selectedDeck={room.cardDeckId || 'fibonacci'}
-                  currentVote={votes.find(v => v.userId === currentUser?.id)?.value || null}
-                  hasVoted={votes.some(v => v.userId === currentUser?.id)}
-                  isVotingActive={isVotingActive && !areVotesRevealed}
-                  onVote={handleVote}
-                />
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-slate-500 text-sm">Waiting for story...</p>
-                </div>
-              )}
-            </div>
+          
           </div>
         </div>
       </div>
-      )}
+    
 
       {/* Authentication Modal */}
       {showAuthModal && (
@@ -946,6 +1101,8 @@ const RoomPage: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
+  )}
     </div>
   );
 };

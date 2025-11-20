@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Room } from '@planning-poker/shared';
 import { Copy, Share2, Check, Users, Clock, UserPlus, Lock } from 'lucide-react';
+import Button from './Button';
 
 interface RoomInfoProps {
   room: Room;
@@ -82,9 +83,11 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={copyRoomUrl}
-            className={`btn-secondary btn-sm transition-all duration-200 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : ''}`}
+            className={`transition-all duration-200 ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : ''}`}
             title="Copy room URL"
           >
             {copied ? (
@@ -93,15 +96,15 @@ const RoomInfo: React.FC<RoomInfoProps> = ({ room }) => {
               <Copy className="w-4 h-4" />
             )}
             {copied ? 'Copied!' : 'Copy URL'}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
             onClick={shareRoom}
-            className="btn-primary btn-sm"
             title="Share room"
           >
             <Share2 className="w-4 h-4" />
             Share
-          </button>
+          </Button>
         </div>
       </div>
 

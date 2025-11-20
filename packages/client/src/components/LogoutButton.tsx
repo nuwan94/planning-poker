@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { LogOut, Loader2 } from 'lucide-react';
+import Button from './Button';
 
 const LogoutButton: React.FC = () => {
   const { logout, isLoading } = useAuth0();
@@ -8,7 +9,7 @@ const LogoutButton: React.FC = () => {
   const handleLogout = () => {
     // Clear user data from localStorage
     localStorage.removeItem('planningPokerUser');
-    
+
     logout({
       logoutParams: {
         returnTo: globalThis.location.origin,
@@ -17,10 +18,11 @@ const LogoutButton: React.FC = () => {
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={handleLogout}
       disabled={isLoading}
-      className="btn-ghost p-2.5 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+      className="p-2.5 rounded-xl hover:bg-red-50 hover:text-red-600"
       title="Log Out"
     >
       {isLoading ? (
@@ -28,7 +30,7 @@ const LogoutButton: React.FC = () => {
       ) : (
         <LogOut className="w-5 h-5" />
       )}
-    </button>
+    </Button>
   );
 };
 

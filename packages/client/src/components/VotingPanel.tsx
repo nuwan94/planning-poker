@@ -5,7 +5,6 @@ import PlanningPokerCard from './PlanningPokerCard';
 interface VotingPanelProps {
   selectedDeck: string;
   currentVote: string | null;
-  hasVoted: boolean;
   isVotingActive: boolean;
   onVote: (value: string) => void;
 }
@@ -13,7 +12,6 @@ interface VotingPanelProps {
 const VotingPanel: React.FC<VotingPanelProps> = ({
   selectedDeck,
   currentVote,
-  hasVoted,
   isVotingActive,
   onVote
 }) => {
@@ -59,20 +57,6 @@ const VotingPanel: React.FC<VotingPanelProps> = ({
           />
         ))}
       </div>
-      
-      {hasVoted && (
-        <div className="mt-6 text-center bg-green-50 rounded-lg p-4 border border-green-200">
-          <p className="text-green-700 font-medium flex items-center justify-center">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            You voted: <span className="font-bold ml-1">{currentVote}</span>
-          </p>
-          <p className="text-xs text-green-600 mt-1">
-            You can change your vote anytime before reveal
-          </p>
-        </div>
-      )}
     </div>
   );
 };

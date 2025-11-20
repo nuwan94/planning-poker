@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';
+import Button from '../components/Button';
 
 const NotFoundPage: React.FC = () => {
   const navigate = useNavigate();
@@ -16,13 +17,13 @@ const NotFoundPage: React.FC = () => {
       <p className="text-lg text-gray-600 mb-8">
         The page you're looking for doesn't exist.
       </p>
-      <button
+      <Button
         onClick={() => navigate('/')}
-        className="btn-primary flex items-center justify-center mx-auto text-lg px-6 py-3"
+        className="flex items-center justify-center mx-auto text-lg px-6 py-3"
       >
         <Home className="mr-2" size={20} />
         Go Home
-      </button>
+      </Button>
     </div>
   );
 };

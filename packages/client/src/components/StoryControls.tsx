@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Story } from '@planning-poker/shared';
 import { FileText, Play, RotateCcw, Eye, Edit3, Check, X } from 'lucide-react';
+import VotingPanel from './VotingPanel';
+import Button from './Button';
 
 interface StoryControlsProps {
   currentStory: Story | undefined;
@@ -12,6 +14,10 @@ interface StoryControlsProps {
   onRevealVotes: () => void;
   onClearVotes: () => void;
   onUpdateStory: (storyUpdate: Partial<Story>) => void;
+  // Voting panel props
+  selectedDeck?: string;
+  currentVote?: string | null;
+  onVote?: (value: string) => void;
 }
 
 const StoryControls: React.FC<StoryControlsProps> = ({
@@ -23,7 +29,10 @@ const StoryControls: React.FC<StoryControlsProps> = ({
   onStartVoting,
   onRevealVotes,
   onClearVotes,
-  onUpdateStory
+  onUpdateStory,
+  selectedDeck,
+  currentVote,
+  onVote
 }) => {
   const [isCreatingStory, setIsCreatingStory] = useState(false);
   const [isEditingStory, setIsEditingStory] = useState(false);
@@ -108,25 +117,26 @@ const StoryControls: React.FC<StoryControlsProps> = ({
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button
+            <Button
               onClick={handleCreateStory}
               disabled={!storyTitle.trim()}
-              className="flex-1 btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-4 h-4 mr-2" />
               Start Voting
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 setIsCreatingStory(false);
                 setStoryTitle('');
                 setStoryDescription('');
               }}
-              className="flex-1 btn-secondary flex items-center justify-center"
+              className="flex-1 flex items-center justify-center"
             >
               <X className="w-4 h-4 mr-2" />
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -134,7 +144,22 @@ const StoryControls: React.FC<StoryControlsProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative">
+      {/* Reveal Votes - Top Right Corner */}
+      {currentStory && isVotingActive && !areVotesRevealed && (
+        <div className="absolute top-4 right-4 z-10">
+          {isRoomOwner && canRevealVotes && (
+            <Button
+              onClick={onRevealVotes}
+              className="flex items-center"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Reveal Votes
+            </Button>
+          )}
+        </div>
+      )}
+
       {currentStory ? (
         <div>
           <div className="flex items-start justify-between mb-4">
@@ -155,21 +180,22 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                     placeholder="Story description..."
                   />
                   <div className="flex space-x-2">
-                    <button
+                    <Button
                       onClick={handleUpdateStory}
                       disabled={!storyTitle.trim()}
-                      className="btn-primary text-sm py-1 px-3 flex items-center"
+                      className="text-sm py-1 px-3 flex items-center"
                     >
                       <Check className="w-3 h-3 mr-1" />
                       Save
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="secondary"
                       onClick={cancelEditing}
-                      className="btn-secondary text-sm py-1 px-3 flex items-center"
+                      className="text-sm py-1 px-3 flex items-center"
                     >
                       <X className="w-3 h-3 mr-1" />
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -180,13 +206,14 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                       {currentStory.title}
                     </h3>
                     {isRoomOwner && (
-                      <button
+                      <Button
+                        variant="ghost"
                         onClick={startEditing}
-                        className="ml-2 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                        className="ml-2 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
                         title="Edit story"
                       >
                         <Edit3 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                   {currentStory.description && (
@@ -197,26 +224,29 @@ const StoryControls: React.FC<StoryControlsProps> = ({
             </div>
           </div>
 
+          {/* Voting Panel - shown when voting is active and not revealed */}
+          {currentStory && isVotingActive && !areVotesRevealed && selectedDeck && onVote && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <VotingPanel
+                selectedDeck={selectedDeck}
+                currentVote={currentVote || null}
+                isVotingActive={true}
+                onVote={onVote}
+              />
+            </div>
+          )}
+
           {!isEditingStory && (
             <div className="flex flex-wrap gap-3">
-              {isRoomOwner && isVotingActive && !areVotesRevealed && canRevealVotes && (
-                <button
-                  onClick={onRevealVotes}
-                  className="btn-primary flex items-center"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Reveal Votes
-                </button>
-              )}
-              
               {isRoomOwner && areVotesRevealed && (
-                <button
+                <Button
+                  variant="secondary"
                   onClick={onClearVotes}
-                  className="btn-secondary flex items-center"
+                  className="flex items-center"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Revote
-                </button>
+                </Button>
               )}
 
               {/* Message for non-owners */}
@@ -239,13 +269,13 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                   
                   {/* Start New Story button for owner */}
                   {isRoomOwner && (
-                    <button
+                    <Button
                       onClick={() => setIsCreatingStory(true)}
-                      className="btn-primary flex items-center"
+                      className="flex items-center"
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Start New Story
-                    </button>
+                    </Button>
                   )}
                 </>
               )}
@@ -265,13 +295,13 @@ const StoryControls: React.FC<StoryControlsProps> = ({
               <p className="text-slate-600 mb-6">
                 Create your first story to begin the estimation session with your team
               </p>
-              <button
+              <Button
                 onClick={() => setIsCreatingStory(true)}
-                className="btn-primary flex items-center justify-center mx-auto px-6 py-3 text-base"
+                className="flex items-center justify-center mx-auto px-6 py-3 text-base"
               >
                 <Play className="w-5 h-5 mr-2" />
                 Create Story
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="max-w-md mx-auto">

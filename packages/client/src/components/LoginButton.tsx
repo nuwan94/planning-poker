@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { LogIn, Loader2 } from 'lucide-react';
+import Button from './Button';
 
 const LoginButton: React.FC = () => {
   const { loginWithRedirect, isLoading } = useAuth0();
@@ -14,10 +15,10 @@ const LoginButton: React.FC = () => {
   };
 
   return (
-    <button
+    <Button
       onClick={handleLogin}
       disabled={isLoading}
-      className="btn-primary px-6 py-2.5 font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+      className="px-6 py-2.5 font-semibold shadow-md hover:shadow-lg"
     >
       {isLoading ? (
         <>
@@ -30,7 +31,7 @@ const LoginButton: React.FC = () => {
           Log In
         </>
       )}
-    </button>
+    </Button>
   );
 };
 

@@ -6,6 +6,7 @@ import CreateRoomModal from './CreateRoomModal';
 import JoinRoomModal from './JoinRoomModal';
 import LoginButton from './LoginButton';
 import UserAvatarDropdown from './UserAvatarDropdown';
+import Button from './Button';
 
 interface NavbarProps {
   roomInfo?: {
@@ -68,47 +69,50 @@ const Navbar: React.FC<NavbarProps> = ({ roomInfo, onLeaveRoom, onShowCreateModa
           {/* Desktop Navigation - Hidden on mobile */}
           <div className="hidden md:flex items-center space-x-3">
             {/* Home Button */}
-            <button
+            <Button
+              variant="ghost"
               onClick={handleHomeClick}
-              className="btn-ghost p-2.5 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all duration-200"
+              className="p-2.5 rounded-xl hover:bg-primary-50 hover:text-primary-600"
               title="Go to Home"
             >
               <Home className="w-5 h-5" />
-            </button>
+            </Button>
 
             {/* My Rooms - Show for authenticated users */}
             {isAuthenticated && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleMyRoomsClick}
-                className={`btn-ghost px-4 py-2.5 font-medium transition-all duration-200 ${
+                className={`px-4 py-2.5 font-medium ${
                   location.pathname === '/my-rooms' ? 'bg-primary-50 text-primary-600' : ''
                 }`}
                 title="My Rooms"
               >
                 <Briefcase className="w-4 h-4 inline mr-2" />
                 My Rooms
-              </button>
+              </Button>
             )}
 
             {/* Create Room */}
-            <button
+            <Button
               onClick={handleCreateClick}
-              className="btn-primary px-4 py-2.5 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+              className="px-4 py-2.5 font-medium shadow-md hover:shadow-lg"
               title="Create Room"
             >
               <Plus className="w-4 h-4 inline mr-2" />
               Create
-            </button>
+            </Button>
 
             {/* Join Room */}
-            <button
+            <Button
+              variant="secondary"
               onClick={handleJoinClick}
-              className="btn-secondary px-4 py-2.5 font-medium shadow-sm hover:shadow-md transition-all duration-200"
+              className="px-4 py-2.5 font-medium shadow-sm hover:shadow-md"
               title="Join Room"
             >
               <Users className="w-4 h-4 inline mr-2" />
               Join
-            </button>
+            </Button>
 
             {/* Divider */}
             <div className="h-8 w-px bg-slate-300"></div>
@@ -120,13 +124,14 @@ const Navbar: React.FC<NavbarProps> = ({ roomInfo, onLeaveRoom, onShowCreateModa
               <>
                 {/* Leave Room button - only show in room */}
                 {roomInfo && onLeaveRoom && (
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={onLeaveRoom}
-                    className="btn-danger px-3 py-2 text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                    className="px-3 py-2 text-sm font-medium shadow-sm hover:shadow-md"
                     title="Leave Room"
                   >
                     Leave Room
-                  </button>
+                  </Button>
                 )}
                 <UserAvatarDropdown />
               </>

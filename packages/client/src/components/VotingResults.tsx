@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Vote, User, CARD_DECKS, CardDeck } from '@planning-poker/shared';
-import { BarChart3, CheckCircle2, Sparkles, MessageSquare } from 'lucide-react';
+import { BarChart3, CheckCircle2, Sparkles } from 'lucide-react';
 import { calculateAverage, findMostCommonVote, isValidCardValue, findNearestCardValue } from '@planning-poker/shared';
 import Avatar from './Avatar';
 
@@ -23,9 +23,6 @@ const VotingResults: React.FC<VotingResultsProps> = ({
   cardDeckId = 'fibonacci',
   onSetFinalEstimate
 }) => {
-  const [calledOnUsers, setCalledOnUsers] = useState<string[]>([]);
-  const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
-  
   // Safety check: ensure votes is an array
   const safeVotes = votes || [];
   
@@ -90,39 +87,6 @@ const VotingResults: React.FC<VotingResultsProps> = ({
     }
   }
   
-  // Get users who haven't been called on yet
-  const uncalledOutliers = outliers.filter(id => !calledOnUsers.includes(id));
-  const allVoters = safeVotes.map(v => v.userId);
-  const uncalledVoters = allVoters.filter(id => !calledOnUsers.includes(id));
-  
-  const handleCallOnUser = (userId: string) => {
-    setCurrentSpeaker(userId);
-    if (!calledOnUsers.includes(userId)) {
-      setCalledOnUsers([...calledOnUsers, userId]);
-    }
-  };
-  
-  const handleNextSpeaker = () => {
-    // First priority: uncalled outliers
-    if (uncalledOutliers.length > 0) {
-      handleCallOnUser(uncalledOutliers[0]);
-    } 
-    // Second priority: any uncalled voter
-    else if (uncalledVoters.length > 0) {
-      const randomIndex = Math.floor(Math.random() * uncalledVoters.length);
-      handleCallOnUser(uncalledVoters[randomIndex]);
-    }
-    // If all outliers heard, just close the speaker display
-    else {
-      setCurrentSpeaker(null);
-    }
-  };
-  
-  const handleSkipToEstimate = () => {
-    setCurrentSpeaker(null);
-    // Owner can proceed to set estimate even if not everyone spoke
-  };
-
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Header */}
@@ -251,131 +215,6 @@ const VotingResults: React.FC<VotingResultsProps> = ({
           </div>
         </div>
 
-        {/* Discussion Section for Owner */}
-        {isRoomOwner && !finalEstimate && (
-          <div className="pt-3 border-t border-slate-200">
-            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center">
-                  <MessageSquare className="w-4 h-4 text-purple-600 mr-2" />
-                  <h4 className="text-sm font-bold text-purple-900">Team Discussion</h4>
-                  {outliers.length > 0 && (
-                    <span className="ml-2 px-2 py-0.5 bg-purple-200 text-purple-700 text-xs rounded-full font-semibold">
-                      {uncalledOutliers.length} outlier{uncalledOutliers.length !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-                {currentSpeaker && (
-                  <button
-                    onClick={handleSkipToEstimate}
-                    className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-                  >
-                    Skip to Estimate
-                  </button>
-                )}
-              </div>
-
-              {/* Current Speaker Display */}
-              {currentSpeaker ? (
-                <div className="bg-white rounded-lg p-3 border-2 border-purple-300 mb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {(() => {
-                        const speaker = getParticipant(currentSpeaker);
-                        if (!speaker) return null;
-                        const vote = safeVotes.find(v => v.userId === currentSpeaker);
-                        return (
-                          <>
-                            <Avatar
-                              name={speaker.name}
-                              avatarUrl={speaker.avatarUrl}
-                              size="md"
-                              className="ring-2 ring-purple-400"
-                            />
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-purple-900">{speaker.name}</p>
-                                {outliers.includes(currentSpeaker) && (
-                                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full font-semibold">
-                                    Outlier
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-purple-700">
-                                Voted: <span className="font-bold">{vote?.value || 'N/A'}</span>
-                              </p>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                    <button
-                      onClick={handleNextSpeaker}
-                      className="px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-all text-sm font-medium"
-                    >
-                      {uncalledOutliers.length > 0 ? 'Next Outlier' : 'Next Person'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <button
-                    onClick={handleNextSpeaker}
-                    disabled={uncalledVoters.length === 0}
-                    className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uncalledOutliers.length > 0 
-                      ? `Hear from Outliers (${uncalledOutliers.length})` 
-                      : uncalledVoters.length > 0
-                      ? `Call on Someone (${uncalledVoters.length} remaining)`
-                      : 'All team members heard'}
-                  </button>
-                  {calledOnUsers.length > 0 && uncalledVoters.length > 0 && (
-                    <p className="text-xs text-purple-600 text-center">
-                      {calledOnUsers.length} heard, {uncalledVoters.length} remaining (optional)
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Quick Call Buttons */}
-              {!currentSpeaker && uncalledVoters.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-purple-200">
-                  <p className="text-xs text-purple-700 mb-2 font-medium">Quick call on:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {safeVotes.map(vote => {
-                      const participant = getParticipant(vote.userId);
-                      if (!participant || calledOnUsers.includes(vote.userId)) return null;
-                      const isOutlier = outliers.includes(vote.userId);
-                      return (
-                        <button
-                          key={vote.userId}
-                          onClick={() => handleCallOnUser(vote.userId)}
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all ${
-                            isOutlier
-                              ? 'bg-orange-100 text-orange-800 border border-orange-300 hover:bg-orange-200'
-                              : 'bg-white text-purple-800 border border-purple-300 hover:bg-purple-50'
-                          }`}
-                          title={participant.name}
-                        >
-                          <Avatar
-                            name={participant.name}
-                            avatarUrl={participant.avatarUrl}
-                            size="sm"
-                            className="scale-75"
-                          />
-                          <span>{participant.name.split(' ')[0]}</span>
-                          <span className="font-bold">({vote.value})</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
         {/* Average Option (if not already in chart) */}
         {isRoomOwner && !finalEstimate && average !== null && (() => {
           const nearestValue = findNearestCardValue(average, cardDeckId);
