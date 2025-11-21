@@ -4,7 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
 import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck, TimerState, TIMER } from '@planning-poker/shared';
-import { Loader, Home, Edit2, Check, X, Crown, Copy, Share2, Loader2, Clock, Pause, Play, Square } from 'lucide-react';
+import { Loader, Home, Edit2, Check, X, Crown, Copy, Loader2, Clock, Pause, Play, Square } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 import Avatar from '../components/Avatar';
@@ -405,30 +405,6 @@ const RoomPage: React.FC = () => {
     }
   };
 
-  const shareRoom = async () => {
-    if (!room) return;
-    
-    const roomUrl = `${window.location.origin}/#/room/${room.id}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Join Planning Poker: ${room.name}`,
-          text: `You're invited to join a planning poker session: ${room.name}`,
-          url: roomUrl,
-        });
-      } catch (error) {
-        // User cancelled or sharing failed, fallback to copy
-        if ((error as Error).name !== 'AbortError') {
-          copyRoomUrl();
-        }
-      }
-    } else {
-      // Fallback to copy for browsers that don't support Web Share API
-      copyRoomUrl();
-    }
-  };
-
   const handleUpdateCardDeck = async (deckId: string) => {
     if (!room) return;
 
@@ -795,14 +771,6 @@ const RoomPage: React.FC = () => {
                     <span className="hidden sm:inline">Copy Link</span>
                   </>
                 )}
-              </button>
-              <button
-                onClick={shareRoom}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg transition-all shadow-md hover:shadow-lg"
-                title="Share room"
-              >
-                <Share2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Share</span>
               </button>
               <button
                 onClick={() => navigate('/')}
