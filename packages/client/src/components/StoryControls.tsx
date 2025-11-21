@@ -1,8 +1,112 @@
 import React, { useState } from 'react';
-import { Story } from '@planning-poker/shared';
-import { FileText, Play, RotateCcw, Eye, Edit3, Check, X } from 'lucide-react';
+import { Story, TimerState } from '@planning-poker/shared';
+import { FileText, Play, RotateCcw, Eye, Edit3, Check, X, Clock, Pause, Play as PlayIcon, Square } from 'lucide-react';
 import VotingPanel from './VotingPanel';
 import Button from './Button';
+
+interface StoryTimerDisplayProps {
+  timer?: TimerState;
+  onPause?: () => void;
+  onResume?: () => void;
+  onStop?: () => void;
+  onRestart?: () => void;
+  isOwner: boolean;
+  timerConfig?: number | null;
+}
+
+const StoryTimerDisplay: React.FC<StoryTimerDisplayProps> = ({
+  timer,
+  onPause,
+  onResume,
+  onStop,
+  onRestart,
+  isOwner,
+  timerConfig
+}) => {
+  if (!timer) {
+    return null; // Don't show anything if no timer
+  }
+
+  const isStopped = !timer.isActive && timer.remaining === 0;
+  const progressPercentage = timerConfig ? ((timerConfig - timer.remaining) / timerConfig) * 100 : 0;
+
+  return (
+    <div className="space-y-2">
+      {/* Progress Bar */}
+      <div className="w-full bg-slate-200 rounded-full h-2">
+        <div
+          className={`h-2 rounded-full transition-all duration-1000 ${
+            isStopped
+              ? 'bg-slate-400'
+              : timer.isActive
+                ? 'bg-blue-500'
+                : 'bg-amber-400'
+          }`}
+          style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
+        />
+      </div>
+
+      {/* Timer Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-slate-500" />
+          <span className="text-sm font-mono font-medium text-slate-700">
+            {Math.floor(timer.remaining / 60)}:{(timer.remaining % 60).toString().padStart(2, '0')}
+          </span>
+          <span className="text-xs text-slate-500">
+            {timer.isActive ? 'running' : isStopped ? 'stopped' : 'paused'}
+          </span>
+        </div>
+
+        {isOwner && (
+          <div className="flex items-center gap-1">
+            {isStopped ? (
+              // Show restart button when timer is stopped
+              onRestart && timerConfig && (
+                <button
+                  onClick={onRestart}
+                  className="flex items-center justify-center w-6 h-6 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
+                  title={`Restart timer (${Math.floor(timerConfig / 60)}:${(timerConfig % 60).toString().padStart(2, '0')})`}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              )
+            ) : timer.isPaused ? (
+              onResume && (
+                <button
+                  onClick={onResume}
+                  className="flex items-center justify-center w-6 h-6 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
+                  title="Resume timer"
+                >
+                  <PlayIcon className="w-3 h-3" />
+                </button>
+              )
+            ) : (
+              onPause && (
+                <button
+                  onClick={onPause}
+                  className="flex items-center justify-center w-6 h-6 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded transition-colors"
+                  title="Pause timer"
+                >
+                  <Pause className="w-3 h-3" />
+                </button>
+              )
+            )}
+            {!isStopped && onStop && (
+              <button
+                onClick={onStop}
+                className="flex items-center justify-center w-6 h-6 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
+                title="Stop timer"
+              >
+                <Square className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface StoryControlsProps {
   currentStory: Story | undefined;
@@ -10,7 +114,8 @@ interface StoryControlsProps {
   areVotesRevealed: boolean;
   canRevealVotes: boolean;
   isRoomOwner: boolean;
-  onStartVoting: (story: Story) => void;
+  onCreateStory: (storyData: { title: string; description?: string }) => void;
+  onStartVoting: () => void;
   onRevealVotes: () => void;
   onClearVotes: () => void;
   onUpdateStory: (storyUpdate: Partial<Story>) => void;
@@ -18,6 +123,13 @@ interface StoryControlsProps {
   selectedDeck?: string;
   currentVote?: string | null;
   onVote?: (value: string) => void;
+  // Timer props
+  timer?: TimerState;
+  timerConfig?: number | null; // Configured timer duration
+  onPauseTimer?: () => void;
+  onResumeTimer?: () => void;
+  onStopTimer?: () => void;
+  onRestartTimer?: () => void;
 }
 
 const StoryControls: React.FC<StoryControlsProps> = ({
@@ -26,13 +138,20 @@ const StoryControls: React.FC<StoryControlsProps> = ({
   areVotesRevealed,
   canRevealVotes,
   isRoomOwner,
+  onCreateStory,
   onStartVoting,
   onRevealVotes,
   onClearVotes,
   onUpdateStory,
   selectedDeck,
   currentVote,
-  onVote
+  onVote,
+  timer,
+  timerConfig,
+  onPauseTimer,
+  onResumeTimer,
+  onStopTimer,
+  onRestartTimer
 }) => {
   const [isCreatingStory, setIsCreatingStory] = useState(false);
   const [isEditingStory, setIsEditingStory] = useState(false);
@@ -42,16 +161,13 @@ const StoryControls: React.FC<StoryControlsProps> = ({
   const handleCreateStory = () => {
     if (!storyTitle.trim()) return;
 
-    const newStory: Story = {
-      id: `story_${Date.now()}`,
-      title: storyTitle.trim(),
-      description: storyDescription.trim() || undefined,
-      votes: [],
-      isRevealed: false,
-      createdAt: new Date()
-    };
+    console.log('[StoryControls] Creating story:', { title: storyTitle.trim(), description: storyDescription.trim() });
 
-    onStartVoting(newStory);
+    onCreateStory({
+      title: storyTitle.trim(),
+      description: storyDescription.trim() || undefined
+    });
+
     setStoryTitle('');
     setStoryDescription('');
     setIsCreatingStory(false);
@@ -123,7 +239,7 @@ const StoryControls: React.FC<StoryControlsProps> = ({
               className="flex-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-4 h-4 mr-2" />
-              Start Voting
+              Create Story
             </Button>
             <Button
               variant="secondary"
@@ -216,6 +332,22 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                       </Button>
                     )}
                   </div>
+                  
+                  {/* Timer Display - Progress bar below story title */}
+                  {timer && (
+                    <div className="mb-2">
+                      <StoryTimerDisplay
+                        timer={timer}
+                        onPause={onPauseTimer}
+                        onResume={onResumeTimer}
+                        onStop={onStopTimer}
+                        onRestart={onRestartTimer}
+                        isOwner={isRoomOwner}
+                        timerConfig={timerConfig}
+                      />
+                    </div>
+                  )}
+                  
                   {currentStory.description && (
                     <p className="text-slate-600 leading-relaxed">{currentStory.description}</p>
                   )}
@@ -246,6 +378,17 @@ const StoryControls: React.FC<StoryControlsProps> = ({
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Revote
+                </Button>
+              )}
+
+              {/* Start Voting button - shown when story exists but voting not active */}
+              {isRoomOwner && currentStory && !isVotingActive && !areVotesRevealed && (
+                <Button
+                  onClick={onStartVoting}
+                  className="flex items-center"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  {timerConfig ? 'Start Voting & Timer' : 'Start Voting'}
                 </Button>
               )}
 

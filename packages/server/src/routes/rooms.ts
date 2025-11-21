@@ -112,10 +112,12 @@ router.post('/', createRoomValidation, async (req: Request<{}, ApiResponse<Room>
 // Update room
 router.put('/:id', updateRoomValidation, async (req: Request<{id: string}, ApiResponse<Room>, UpdateRoomRequest>, res: Response<ApiResponse<Room>>) => {
   const { id } = req.params;
-  const { name, description, cardDeckId } = req.body;
+  const { name, description, cardDeckId, timerDuration } = req.body;
+  
+  console.log(`[API] Updating room ${id} with:`, { name, description, cardDeckId, timerDuration });
   
   try {
-    const room = await roomService.updateRoom(id, { name, description, cardDeckId });
+    const room = await roomService.updateRoom(id, { name, description, cardDeckId, timerDuration });
     
     if (!room) {
       return res.status(404).json({
@@ -123,6 +125,8 @@ router.put('/:id', updateRoomValidation, async (req: Request<{id: string}, ApiRe
         message: 'Room not found'
       });
     }
+
+    console.log(`[API] Room ${id} updated successfully. New timerDuration:`, room.timerDuration);
 
     // Broadcast the update to all participants in the room
     io.to(id).emit(SOCKET_EVENTS.ROOM_UPDATED, room);

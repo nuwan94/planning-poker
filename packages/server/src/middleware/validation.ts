@@ -52,6 +52,14 @@ export const updateRoomValidation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Description must not exceed 500 characters'),
+  body('cardDeckId')
+    .optional()
+    .isIn(['fibonacci', 'modified-fibonacci', 't-shirt', 'powers-of-2', 'custom'])
+    .withMessage('Invalid card deck ID'),
+  body('timerDuration')
+    .optional()
+    .isInt({ min: 0, max: 3600 })
+    .withMessage('Timer duration must be between 0 and 3600 seconds'),
   handleValidationErrors
 ];
 

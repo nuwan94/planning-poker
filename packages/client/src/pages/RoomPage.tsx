@@ -4,7 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useRoom } from '../hooks/useRoom';
 import { useSocket } from '../contexts/SocketContext';
 import { Story, Vote, SOCKET_EVENTS, CARD_DECKS, generateId, CardDeck, TimerState, TIMER } from '@planning-poker/shared';
-import { Loader, Home, Edit2, Check, X, Crown, Copy, Loader2, Clock, Pause, Play, Square } from 'lucide-react';
+import { Loader, Home, Edit2, Check, X, Crown, Copy, Loader2, Clock } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 import toast from 'react-hot-toast';
 import Avatar from '../components/Avatar';
@@ -14,85 +14,45 @@ import StoryHistory from '../components/StoryHistory';
 import Button from '../components/Button';
 
 interface TimerIconButtonProps {
-  timer?: TimerState;
-  onStart: (duration: number) => void;
-  onPause: () => void;
-  onResume: () => void;
-  onStop: () => void;
+  timerConfig: number | null;
+  onConfigure: (duration: number) => void;
   isOwner: boolean;
 }
 
 const TimerIconButton: React.FC<TimerIconButtonProps> = ({
-  timer,
-  onStart,
-  onPause,
-  onResume,
-  onStop,
+  timerConfig,
+  onConfigure,
   isOwner
 }) => {
   const [showTimerModal, setShowTimerModal] = useState(false);
 
-  if (!isOwner && !timer?.isActive) {
-    return null; // Don't show anything for non-owners when no timer is active
+  if (!isOwner) {
+    return null; // Only show setup button for owners
   }
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        {/* Timer Display/Icon */}
-        {timer?.isActive ? (
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg px-3 py-1.5">
-            <Clock className="w-4 h-4 text-slate-600" />
-            <span className="text-sm font-mono font-medium text-slate-700">
-              {Math.floor(timer.remaining / 60)}:{(timer.remaining % 60).toString().padStart(2, '0')}
-            </span>
-            <div className="flex items-center gap-0.5 ml-1">
-              {timer.isPaused ? (
-                <button
-                  onClick={onResume}
-                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
-                  title="Resume timer"
-                >
-                  <Play className="w-3 h-3" />
-                </button>
-              ) : (
-                <button
-                  onClick={onPause}
-                  className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                  title="Pause timer"
-                >
-                  <Pause className="w-3 h-3" />
-                </button>
-              )}
-              <button
-                onClick={onStop}
-                className="p-1 text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                title="Stop timer"
-              >
-                <Square className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          isOwner && (
-            <Button
-              onClick={() => setShowTimerModal(true)}
-              className="flex items-center gap-1.5"
-              title="Start timer"
-            >
-              <Clock className="w-4 h-4" />
-              Timer
-            </Button>
-          )
-        )}
-      </div>
+      <Button
+        onClick={() => setShowTimerModal(true)}
+        className="flex items-center gap-1.5"
+        title={timerConfig ? `Timer configured: ${formatDuration(timerConfig)}` : "Configure timer"}
+      >
+        <Clock className="w-4 h-4" />
+        {timerConfig ? `Timer: ${formatDuration(timerConfig)}` : "Timer"}
+      </Button>
 
       {/* Timer Modal */}
       {showTimerModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Start Voting Timer</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Configure Voting Timer</h3>
               <button
                 onClick={() => setShowTimerModal(false)}
                 className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
@@ -101,7 +61,7 @@ const TimerIconButton: React.FC<TimerIconButtonProps> = ({
               </button>
             </div>
 
-            <TimerModalContent onStart={onStart} onClose={() => setShowTimerModal(false)} />
+            <TimerModalContent onConfigure={onConfigure} onClose={() => setShowTimerModal(false)} />
           </div>
         </div>
       )}
@@ -110,22 +70,22 @@ const TimerIconButton: React.FC<TimerIconButtonProps> = ({
 };
 
 interface TimerModalContentProps {
-  onStart: (duration: number) => void;
+  onConfigure: (duration: number) => void;
   onClose: () => void;
 }
 
-const TimerModalContent: React.FC<TimerModalContentProps> = ({ onStart, onClose }) => {
+const TimerModalContent: React.FC<TimerModalContentProps> = ({ onConfigure, onClose }) => {
   const [customDuration, setCustomDuration] = useState('');
 
-  const handleStartTimer = (duration: number) => {
-    onStart(duration);
+  const handleConfigureTimer = (duration: number) => {
+    onConfigure(duration);
     onClose();
   };
 
-  const handleCustomStart = () => {
+  const handleCustomConfigure = () => {
     const duration = parseInt(customDuration);
     if (duration >= TIMER.MIN_DURATION && duration <= TIMER.MAX_DURATION) {
-      handleStartTimer(duration);
+      handleConfigureTimer(duration);
     }
   };
 
@@ -138,7 +98,7 @@ const TimerModalContent: React.FC<TimerModalContentProps> = ({ onStart, onClose 
           {TIMER.PRESET_DURATIONS.map((preset: any) => (
             <button
               key={preset.value}
-              onClick={() => handleStartTimer(preset.value)}
+              onClick={() => handleConfigureTimer(preset.value)}
               className="px-4 py-3 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border border-transparent transition-all"
             >
               {preset.label}
@@ -161,7 +121,7 @@ const TimerModalContent: React.FC<TimerModalContentProps> = ({ onStart, onClose 
             className="flex-1 px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <button
-            onClick={handleCustomStart}
+            onClick={handleCustomConfigure}
             disabled={
               !customDuration ||
               parseInt(customDuration) < TIMER.MIN_DURATION ||
@@ -169,7 +129,7 @@ const TimerModalContent: React.FC<TimerModalContentProps> = ({ onStart, onClose 
             }
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
           >
-            Start
+            Configure
           </button>
         </div>
         <p className="text-xs text-slate-500 mt-1">
@@ -207,6 +167,7 @@ const RoomPage: React.FC = () => {
   const [isVotingActive, setIsVotingActive] = useState(false);
   const [areVotesRevealed, setAreVotesRevealed] = useState(false);
   const [timerState, setTimerState] = useState<TimerState | undefined>(currentStory?.timer);
+  const [timerConfig, setTimerConfig] = useState<number | null>(room?.timerDuration || null); // Configured timer duration in seconds
 
   // Debug: Log room data to verify avatarUrl is present
   useEffect(() => {
@@ -223,9 +184,17 @@ const RoomPage: React.FC = () => {
         setCurrentStory(room.currentStory);
         setVotes(room.currentStory.votes || []);
         setAreVotesRevealed(room.currentStory.isRevealed || false);
-        // Set voting active if there's a story and votes aren't revealed
-        setIsVotingActive(!room.currentStory.isRevealed);
-        console.log('[RoomPage] Voting active:', !room.currentStory.isRevealed);
+        // Use the room's isVotingActive field instead of deriving from story state
+        setIsVotingActive(room.isVotingActive || false);
+        console.log('[RoomPage] Voting active:', room.isVotingActive || false);
+        
+        // Update timer state from story
+        if (room.currentStory.timer) {
+          console.log('[RoomPage] Setting timer state from story:', room.currentStory.timer);
+          setTimerState(room.currentStory.timer);
+        } else {
+          setTimerState(undefined);
+        }
       } else {
         console.log('[RoomPage] No current story');
         setCurrentStory(undefined);
@@ -233,6 +202,11 @@ const RoomPage: React.FC = () => {
         setIsVotingActive(false);
         setAreVotesRevealed(false);
       }
+
+      // Update timer configuration from room data
+      console.log('[RoomPage] Room timerDuration:', room.timerDuration);
+      setTimerConfig(room.timerDuration || null);
+      console.log('[RoomPage] Timer config updated to:', room.timerDuration || null);
     }
   }, [room]);
 
@@ -267,6 +241,13 @@ const RoomPage: React.FC = () => {
       setVotes([]);
       setAreVotesRevealed(false);
       setIsVotingActive(true);
+
+      // Restart timer if it was configured for this room
+      if (timerConfig && socket && roomId) {
+        console.log('[RoomPage] Restarting timer for revote:', timerConfig, 'seconds');
+        socket.emit(SOCKET_EVENTS.START_TIMER, roomId, timerConfig);
+      }
+
       toast.success('Ready to revote!');
     };
 
@@ -285,6 +266,15 @@ const RoomPage: React.FC = () => {
       }
     };
 
+    const handleStoryCreated = (story: Story) => {
+      console.log('[RoomPage] Story created:', story);
+      setCurrentStory(story);
+      setVotes([]);
+      setAreVotesRevealed(false);
+      setIsVotingActive(false);
+      toast.success(`New story: ${story.title}`);
+    };
+
     const handleFinalEstimateSet = (story: Story) => {
       console.log('[RoomPage] Final estimate set:', story);
       setCurrentStory(story);
@@ -299,22 +289,30 @@ const RoomPage: React.FC = () => {
 
     const handleTimerUpdated = (timer: TimerState) => {
       console.log('[RoomPage] Timer updated:', timer);
-      setTimerState(timer);
+      setTimerState({ ...timer }); // Ensure immutability
+    };
+
+    const handleTimerTick = (remaining: number) => {
+      console.log('[RoomPage] Timer tick - remaining:', remaining);
+      setTimerState(prev => prev ? { ...prev, remaining } : undefined);
     };
 
     const handleTimerComplete = () => {
       console.log('[RoomPage] Timer completed');
       toast.success('Time\'s up!', { icon: '⏰' });
+      setTimerState(prev => prev ? { ...prev, isActive: false, remaining: 0 } : undefined);
     };
 
     socket.on(SOCKET_EVENTS.VOTING_STARTED, handleVotingStarted);
     socket.on(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
     socket.on(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
     socket.on(SOCKET_EVENTS.VOTES_CLEARED, handleVotesCleared);
+    socket.on(SOCKET_EVENTS.STORY_CREATED, handleStoryCreated);
     socket.on(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
     socket.on(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
     socket.on(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
     socket.on(SOCKET_EVENTS.TIMER_UPDATED, handleTimerUpdated);
+    socket.on(SOCKET_EVENTS.TIMER_TICK, handleTimerTick);
     socket.on(SOCKET_EVENTS.TIMER_COMPLETE, handleTimerComplete);
 
     return () => {
@@ -322,13 +320,23 @@ const RoomPage: React.FC = () => {
       socket.off(SOCKET_EVENTS.VOTE_SUBMITTED, handleVoteSubmitted);
       socket.off(SOCKET_EVENTS.VOTES_REVEALED, handleVotesRevealed);
       socket.off(SOCKET_EVENTS.VOTES_CLEARED, handleVotesCleared);
+      socket.off(SOCKET_EVENTS.STORY_CREATED, handleStoryCreated);
       socket.off(SOCKET_EVENTS.STORY_UPDATED, handleStoryUpdated);
       socket.off(SOCKET_EVENTS.FINAL_ESTIMATE_SET, handleFinalEstimateSet);
       socket.off(SOCKET_EVENTS.ROOM_UPDATED, handleRoomUpdated);
       socket.off(SOCKET_EVENTS.TIMER_UPDATED, handleTimerUpdated);
+      socket.off(SOCKET_EVENTS.TIMER_TICK, handleTimerTick);
       socket.off(SOCKET_EVENTS.TIMER_COMPLETE, handleTimerComplete);
     };
   }, [socket, roomId]);
+
+  // Restart timer when timerConfig changes and timer is active
+  useEffect(() => {
+    if (timerConfig && timerState?.isActive && socket && roomId) {
+      console.log('[RoomPage] Timer config changed while timer is active, restarting with new duration:', timerConfig);
+      socket.emit(SOCKET_EVENTS.START_TIMER, roomId, timerConfig);
+    }
+  }, [timerConfig, timerState?.isActive, socket, roomId]);
 
   // Handle authentication requirement
   useEffect(() => {
@@ -426,19 +434,38 @@ const RoomPage: React.FC = () => {
   };
 
   // Story handlers
-  const handleStartVoting = async (story: Story) => {
-    if (!socket || !roomId) return;
-    
+  // Story handlers
+  const handleCreateStory = async (storyData: { title: string; description?: string }) => {
+    if (!roomId) return;
+
     try {
       // Create story via API
       const createdStory = await apiClient.createStory({
-        title: story.title,
-        description: story.description,
+        title: storyData.title,
+        description: storyData.description,
         roomId
       });
-      
+
+      console.log('[RoomPage] Story created:', createdStory);
+      // The story will be set via socket broadcast
+    } catch (error) {
+      console.error('Failed to create story:', error);
+      toast.error('Failed to create story');
+    }
+  };
+
+  const handleStartVoting = async () => {
+    if (!socket || !roomId || !currentStory) return;
+
+    try {
       // Start voting via socket
-      socket.emit(SOCKET_EVENTS.VOTING_STARTED, roomId, createdStory.id);
+      socket.emit(SOCKET_EVENTS.VOTING_STARTED, roomId, currentStory.id);
+
+      // Start timer if configured
+      if (timerConfig) {
+        console.log('[RoomPage] Starting configured timer:', timerConfig, 'seconds');
+        socket.emit(SOCKET_EVENTS.START_TIMER, roomId, timerConfig);
+      }
     } catch (error) {
       console.error('Failed to start voting:', error);
       toast.error('Failed to start voting');
@@ -449,6 +476,12 @@ const RoomPage: React.FC = () => {
     if (!socket || !currentStory || !roomId) return;
     console.log('[RoomPage] Revealing votes for story:', currentStory.id, 'in room:', roomId);
     socket.emit(SOCKET_EVENTS.VOTES_REVEALED, roomId, currentStory.id);
+    
+    // Auto-stop timer when votes are revealed
+    if (timerState?.isActive) {
+      console.log('[RoomPage] Auto-stopping timer when revealing votes');
+      handleStopTimer();
+    }
   };
 
   const handleClearVotes = () => {
@@ -499,11 +532,19 @@ const RoomPage: React.FC = () => {
     socket.emit(SOCKET_EVENTS.REMOVE_USER, roomId, userIdToRemove, currentUser.id);
   };
 
-  // Timer handlers
-  const handleStartTimer = (duration: number) => {
-    if (!socket || !roomId) return;
-    console.log('[RoomPage] Starting timer:', duration, 'seconds');
-    socket.emit(SOCKET_EVENTS.START_TIMER, roomId, duration);
+  const handleConfigureTimer = async (duration: number) => {
+    console.log('[RoomPage] Configuring timer:', duration, 'seconds');
+    setTimerConfig(duration);
+
+    // Save timer configuration to database
+    try {
+      console.log('[RoomPage] Saving timer configuration to database...');
+      await apiClient.updateRoom(roomId!, { timerDuration: duration });
+      console.log('[RoomPage] Timer configuration saved to database successfully');
+    } catch (error) {
+      console.error('[RoomPage] Failed to save timer configuration:', error);
+      toast.error('Failed to save timer configuration');
+    }
   };
 
   const handlePauseTimer = () => {
@@ -522,6 +563,12 @@ const RoomPage: React.FC = () => {
     if (!socket || !roomId) return;
     console.log('[RoomPage] Stopping timer');
     socket.emit(SOCKET_EVENTS.STOP_TIMER, roomId);
+  };
+
+  const handleRestartTimer = () => {
+    if (!socket || !roomId || !timerConfig) return;
+    console.log('[RoomPage] Restarting timer:', timerConfig, 'seconds');
+    socket.emit(SOCKET_EVENTS.START_TIMER, roomId, timerConfig);
   };
 
   // Authentication handlers
@@ -736,16 +783,13 @@ const RoomPage: React.FC = () => {
               </div>
             </div>
             
-            {/* Timer - Show when there's an active story */}
-            {currentStory && (
+            {/* Timer configuration - Show when there's an active story and user is owner */}
+            {currentStory && isOwner && (
               <div className="flex items-center">
                 <TimerIconButton
-                  timer={timerState}
-                  onStart={handleStartTimer}
-                  onPause={handlePauseTimer}
-                  onResume={handleResumeTimer}
-                  onStop={handleStopTimer}
-                  isOwner={isOwner || false}
+                  timerConfig={timerConfig}
+                  onConfigure={handleConfigureTimer}
+                  isOwner={true}
                 />
               </div>
             )}
@@ -794,6 +838,7 @@ const RoomPage: React.FC = () => {
               areVotesRevealed={areVotesRevealed}
               canRevealVotes={votes.length > 0 && !areVotesRevealed}
               isRoomOwner={isOwner || false}
+              onCreateStory={handleCreateStory}
               onStartVoting={handleStartVoting}
               onRevealVotes={handleRevealVotes}
               onClearVotes={handleClearVotes}
@@ -801,6 +846,12 @@ const RoomPage: React.FC = () => {
               selectedDeck={room.cardDeckId || 'fibonacci'}
               currentVote={votes.find(v => v.userId === currentUser?.id)?.value || null}
               onVote={handleVote}
+              timer={timerState}
+              timerConfig={timerConfig}
+              onPauseTimer={handlePauseTimer}
+              onResumeTimer={handleResumeTimer}
+              onStopTimer={handleStopTimer}
+              onRestartTimer={handleRestartTimer}
             />
             
             {/* Voting Results */}

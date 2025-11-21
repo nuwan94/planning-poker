@@ -4,9 +4,11 @@ import {
   CreateStoryRequest, 
   UpdateStoryRequest, 
   ApiResponse,
-  Vote 
+  Vote,
+  SOCKET_EVENTS
 } from '@planning-poker/shared';
 import { storyService } from '../services/storyService';
+import { io } from '../index';
 import { 
   createStoryValidation, 
   updateStoryValidation, 
@@ -68,6 +70,9 @@ router.post('/', createStoryValidation, async (req: Request<{}, ApiResponse<Stor
 
   try {
     const story = await storyService.createStory(roomId, title, description, acceptanceCriteria);
+    
+    // Emit socket event to notify all clients in the room
+    io.to(roomId).emit(SOCKET_EVENTS.STORY_CREATED, story);
     
     res.status(201).json({
       success: true,

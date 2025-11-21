@@ -130,13 +130,18 @@ export class RoomService {
     }
   }
 
-  async updateRoom(roomId: string, updates: Partial<Pick<IRoom, 'name' | 'description' | 'cardDeckId'>>): Promise<IRoom | null> {
+  async updateRoom(roomId: string, updates: Partial<Pick<IRoom, 'name' | 'description' | 'cardDeckId' | 'timerDuration'>>): Promise<IRoom | null> {
+    // Filter out undefined values to avoid overwriting existing data
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, value]) => value !== undefined)
+    );
+
     const room = await Room.findOneAndUpdate(
       { id: roomId },
-      { ...updates, updatedAt: new Date() },
+      { ...filteredUpdates, updatedAt: new Date() },
       { new: true }
     );
-    
+
     if (!room) return null;
     return this.populateRoom(room);
   }
@@ -321,6 +326,7 @@ export class RoomService {
       currentStory,
       storyHistory,
       cardDeckId: room.cardDeckId || 'fibonacci',
+      timerDuration: room.timerDuration,
       isVotingActive: room.isVotingActive,
       isPasswordProtected: !!room.password,
       createdAt: room.createdAt,

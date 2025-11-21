@@ -305,21 +305,34 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
         // Update story with timer state
         const room = await roomService.getRoomById(roomId);
         if (room?.currentStory) {
+          console.log(`[Socket] Updating story ${room.currentStory.id} with timer state`);
           const story = await storyService.updateStory(room.currentStory.id, {
             timer: timerState
           });
           if (story) {
             io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, timerState);
             console.log(`[Socket] Timer started for room ${roomId}`);
+          } else {
+            console.error(`[Socket] Failed to update story ${room.currentStory.id} with timer state`);
+            // Still start the timer even if story update fails
+            io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, timerState);
+            console.log(`[Socket] Timer started for room ${roomId} (story update failed)`);
           }
+        } else {
+          console.log(`[Socket] No current story found for room ${roomId}, starting timer anyway`);
+          io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, timerState);
         }
 
         // Start countdown
         const interval = setInterval(async () => {
           const state = timerStates.get(roomId);
-          if (!state || state.isPaused) return;
+          if (!state || state.isPaused) {
+            console.log(`[Socket] Timer tick skipped for room ${roomId} - paused or no state`);
+            return;
+          }
 
           state.remaining -= 1;
+          console.log(`[Socket] Timer tick for room ${roomId} - remaining: ${state.remaining}`);
 
           if (state.remaining <= 0) {
             // Timer complete
@@ -345,8 +358,12 @@ export const setupSocketHandlers = (io: SocketIOServer) => {
             timerStates.set(roomId, state);
             io.to(roomId).emit(SOCKET_EVENTS.TIMER_TICK, state.remaining);
             io.to(roomId).emit(SOCKET_EVENTS.TIMER_UPDATED, state);
+            console.log(`[Socket] Timer updated for room ${roomId} - remaining: ${state.remaining}`);
           }
         }, 1000);
+
+        roomTimers.set(roomId, interval);
+        console.log(`[Socket] Timer interval started for room ${roomId}`);
 
         roomTimers.set(roomId, interval);
       } catch (error) {
