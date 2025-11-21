@@ -1,6 +1,6 @@
 import React from 'react';
-import { Vote, User, CARD_DECKS, CardDeck } from '@planning-poker/shared';
-import { BarChart3, CheckCircle2, Sparkles } from 'lucide-react';
+import { Vote, User } from '@planning-poker/shared';
+import { TrendingUp, CheckCircle2, Sparkles, Users } from 'lucide-react';
 import { calculateAverage, findMostCommonVote, isValidCardValue, findNearestCardValue } from '@planning-poker/shared';
 import Avatar from './Avatar';
 
@@ -34,10 +34,6 @@ const VotingResults: React.FC<VotingResultsProps> = ({
   const average = calculateAverage(voteValues);
   const consensus = findMostCommonVote(voteValues);
   
-  // Get all possible values from the card deck
-  const deckValues = (Object.values(CARD_DECKS) as unknown as CardDeck[]).find(deck => deck.id === cardDeckId)?.values || 
-                     CARD_DECKS.FIBONACCI.values;
-  
   // Count votes by value and group voters
   const voteCounts: Record<string, number> = voteValues.reduce((acc, vote) => {
     acc[vote] = (acc[vote] || 0) + 1;
@@ -57,185 +53,188 @@ const VotingResults: React.FC<VotingResultsProps> = ({
     return participants.find(p => p.id === userId);
   };
 
-  const maxCount = Math.max(...Object.values(voteCounts), 1); // At least 1 to avoid division by zero
-  
-  // Create results array with all deck values
-  const allResults = deckValues.map(value => [value, voteCounts[value] || 0] as [string, number]);
+  // Only get voted values (filter out non-voted options)
+  const votedResults = Object.entries(voteCounts)
+    .filter(([_, count]) => count > 0)
+    .map(([value, count]) => ({ value, count, voters: votersByValue[value] || [] }))
+    .sort((a, b) => {
+      // Sort by numeric value if possible, otherwise alphabetically
+      const aNum = parseFloat(a.value);
+      const bNum = parseFloat(b.value);
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      return a.value.localeCompare(b.value);
+    });
 
-  // Identify outliers (highest and lowest votes, excluding special values)
-  const numericVotes = safeVotes.filter(v => isValidCardValue(v.value, cardDeckId));
-  const numericValues = numericVotes.map(v => {
-    const num = parseFloat(v.value);
-    return isNaN(num) ? 0 : num;
-  });
-  
-  const outliers: string[] = [];
-  if (numericVotes.length > 2) {
-    const minValue = Math.min(...numericValues);
-    const maxValue = Math.max(...numericValues);
-    
-    // Find users who voted min or max (if they're different)
-    if (minValue !== maxValue) {
-      numericVotes.forEach(vote => {
-        const num = parseFloat(vote.value);
-        if (num === minValue || num === maxValue) {
-          if (!outliers.includes(vote.userId)) {
-            outliers.push(vote.userId);
-          }
-        }
-      });
-    }
-  }
+  const maxCount = Math.max(...votedResults.map(r => r.count), 1);
+  const totalVotes = safeVotes.length;
   
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-slate-200">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <BarChart3 className="w-5 h-5 text-blue-600 mr-2" />
-            <h3 className="text-base font-bold text-slate-900">Voting Results</h3>
-            <span className="ml-2 text-xs text-slate-600">({safeVotes.length} {safeVotes.length === 1 ? 'vote' : 'votes'})</span>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Voting Results</h3>
+              <p className="text-sm text-slate-600">{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'} cast</p>
+            </div>
           </div>
           
           {/* Perfect Consensus Badge */}
-          {consensus && voteCounts[consensus] === safeVotes.length && (
-            <div className="flex items-center bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-300">
-              <Sparkles className="w-3 h-3 mr-1" />
-              <span className="text-xs font-semibold">Consensus!</span>
+          {consensus && voteCounts[consensus] === totalVotes && (
+            <div className="flex items-center bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-4 py-2 rounded-full border border-green-300 shadow-sm">
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span className="text-sm font-bold">Perfect Consensus!</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        {/* Column Chart */}
-        <div className="relative">
-          {/* Chart Container */}
-          <div className="flex items-end justify-around gap-2 h-48 bg-gradient-to-b from-slate-50 to-white rounded-lg p-4 border border-slate-200 overflow-x-auto">
-            {allResults.map(([value, count]) => {
-              const percentage = count > 0 ? (count / safeVotes.length) * 100 : 0;
-              const heightPercentage = count > 0 ? (count / maxCount) * 100 : 0;
-              const isHighest = count === maxCount && count > 0;
-              const voters = votersByValue[value] || [];
-              const hasVotes = count > 0;
-              
-              return (
-                <div key={value} className="flex flex-col items-center flex-1 max-w-[100px] min-w-[60px]">
-                  {/* Column */}
-                  <div className="w-full flex flex-col items-center mb-2">
-                    {/* Count Badge */}
-                    {hasVotes && (
-                      <div className="mb-1 px-2 py-0.5 bg-slate-700 text-white text-xs font-bold rounded-full">
-                        {count}
+      <div className="p-6 space-y-4">
+        {/* Vote Cards Grid */}
+        <div className="grid grid-cols-1 gap-3">
+          {votedResults.map(({ value, count, voters }) => {
+            const percentage = (count / totalVotes) * 100;
+            const isHighest = count === maxCount;
+            
+            return (
+              <div
+                key={value}
+                className={`relative rounded-lg border-2 transition-all ${
+                  isHighest 
+                    ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md' 
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Left: Value Display */}
+                    <div className="flex items-center gap-4">
+                      <div className={`flex items-center justify-center w-16 h-16 rounded-xl font-bold text-2xl ${
+                        isHighest 
+                          ? 'bg-blue-600 text-white shadow-lg' 
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {value}
                       </div>
-                    )}
-                    
-                    {/* 3D Column Bar */}
-                    <div className="relative w-full" style={{ height: '120px' }}>
-                      {hasVotes ? (
-                        <div 
-                          className={`absolute bottom-0 w-full rounded-t-lg transition-all duration-700 ease-out overflow-hidden ${
-                            isHighest 
-                              ? 'bg-gradient-to-t from-blue-600 via-blue-500 to-blue-400 shadow-lg shadow-blue-500/50' 
-                              : 'bg-gradient-to-t from-slate-500 via-slate-400 to-slate-300 shadow-md'
-                          }`}
-                          style={{ height: `${heightPercentage}%`, minHeight: '40px' }}
-                        >
-                          {/* 3D Top Effect */}
-                          <div className={`absolute -top-1 left-0 right-0 h-2 rounded-t-lg ${
-                            isHighest ? 'bg-blue-300' : 'bg-slate-200'
-                          }`} style={{ 
-                            transform: 'perspective(100px) rotateX(45deg)',
-                            transformOrigin: 'bottom'
-                          }}></div>
-                          
-                          {/* Shine Effect */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-t-lg"></div>
-                          
-                          {/* Percentage Label */}
-                          {heightPercentage > 30 && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-white text-xs font-bold drop-shadow-lg">
-                                {percentage.toFixed(0)}%
-                              </span>
-                            </div>
-                          )}
-                          
-                          {/* Green Checkmark Button (for owner) */}
-                          {isRoomOwner && !finalEstimate && isValidCardValue(value, cardDeckId) && (
-                            <button
-                              onClick={() => onSetFinalEstimate && onSetFinalEstimate(value)}
-                              className="absolute bottom-2 left-1/2 -translate-x-1/2 p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-full transition-all hover:scale-110 shadow-lg"
-                              title={`Set ${value} as final estimate`}
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
+                      
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold text-slate-900">{count}</span>
+                          <span className="text-sm text-slate-600">{count === 1 ? 'vote' : 'votes'}</span>
+                          {isHighest && count > 1 && (
+                            <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-full">
+                              Most Popular
+                            </span>
                           )}
                         </div>
-                      ) : (
-                        /* Empty column indicator */
-                        <div className="absolute bottom-0 w-full h-2 rounded-t-lg bg-slate-200 border-2 border-dashed border-slate-300"></div>
+                        
+                        {/* Progress Bar */}
+                        <div className="mt-2 w-48">
+                          <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isHighest ? 'bg-blue-600' : 'bg-slate-400'
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-slate-600 mt-1">{percentage.toFixed(0)}% of votes</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Voters and Action */}
+                    <div className="flex items-center gap-4">
+                      {/* Voters List */}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-1 text-xs text-slate-600">
+                          <Users className="w-3 h-3" />
+                          <span>Voted by:</span>
+                        </div>
+                        <div className="flex items-center gap-1 flex-wrap justify-end max-w-[300px]">
+                          {voters.map((userId) => {
+                            const participant = getParticipant(userId);
+                            if (!participant) return null;
+                            return (
+                              <div key={userId} className="group relative" title={participant.name}>
+                                <Avatar
+                                  name={participant.name}
+                                  avatarUrl={participant.avatarUrl}
+                                  size="md"
+                                  className="ring-2 ring-white hover:ring-blue-400 transition-all"
+                                />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                  {participant.name}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Set as Final Button */}
+                      {isRoomOwner && !finalEstimate && isValidCardValue(value, cardDeckId) && (
+                        <button
+                          onClick={() => onSetFinalEstimate && onSetFinalEstimate(value)}
+                          className="flex items-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all font-semibold text-sm shadow-md hover:shadow-lg"
+                          title={`Set ${value} as final estimate`}
+                        >
+                          <CheckCircle2 className="w-5 h-5" />
+                          <span>Set Final</span>
+                        </button>
                       )}
                     </div>
                   </div>
-                  
-                  {/* Value Label - Fixed height for alignment */}
-                  <div className={`text-center font-bold text-base mb-2 px-2 py-1 rounded h-8 flex items-center justify-center ${
-                    isHighest ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {value}
-                  </div>
-                  
-                  {/* Avatar Group */}
-                  <div className="flex items-center justify-center gap-0.5 flex-wrap max-w-full min-h-[32px]">
-                    {voters.slice(0, 3).map((userId) => {
-                      const participant = getParticipant(userId);
-                      if (!participant) return null;
-                      return (
-                        <div key={userId} className="group relative" title={participant.name}>
-                          <Avatar
-                            name={participant.name}
-                            avatarUrl={participant.avatarUrl}
-                            size="sm"
-                            className="ring-2 ring-white hover:ring-blue-400 transition-all"
-                          />
-                        </div>
-                      );
-                    })}
-                    {voters.length > 3 && (
-                      <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center ring-2 ring-white">
-                        +{voters.length - 3}
-                      </div>
-                    )}
-                  </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Average Option (if not already in chart) */}
+        {/* Statistics Summary */}
+        {average !== null && (
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Average</p>
+              <p className="text-2xl font-bold text-slate-900">{average.toFixed(1)}</p>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-xs font-semibold text-slate-600 uppercase mb-1">Consensus</p>
+              <p className="text-2xl font-bold text-slate-900">{consensus || 'None'}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Average-based Suggestion */}
         {isRoomOwner && !finalEstimate && average !== null && (() => {
           const nearestValue = findNearestCardValue(average, cardDeckId);
-          const alreadyVoted = allResults.some(([value, count]) => value === nearestValue && count > 0);
+          const alreadyVoted = votedResults.some(r => r.value === nearestValue);
           if (!alreadyVoted && isValidCardValue(nearestValue, cardDeckId)) {
             return (
-              <div className="pt-3 border-t border-slate-200">
-                <div className="flex items-center justify-between bg-blue-50 rounded-lg p-3 border border-blue-200">
-                  <div className="flex items-center">
-                    <div className="text-sm">
-                      <span className="text-blue-700 font-medium">Average-based option: </span>
-                      <span className="text-blue-900 font-bold text-lg">{nearestValue}</span>
-                      <span className="text-blue-600 text-xs ml-1">(from avg: {average.toFixed(1)})</span>
+              <div className="pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between bg-amber-50 rounded-lg p-4 border-2 border-amber-200">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-amber-600" />
                     </div>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900">Suggested Estimate</p>
+                      <p className="text-xs text-amber-700">Based on average: {average.toFixed(1)}</p>
+                    </div>
+                    <div className="text-3xl font-bold text-amber-900 ml-4">{nearestValue}</div>
                   </div>
                   <button
                     onClick={() => onSetFinalEstimate && onSetFinalEstimate(nearestValue)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-all font-bold text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-all font-semibold text-sm shadow-md"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Set as Final
+                    Use This
                   </button>
                 </div>
               </div>
@@ -243,25 +242,18 @@ const VotingResults: React.FC<VotingResultsProps> = ({
           }
           return null;
         })()}
-        
-        {/* Hint for owner */}
-        {isRoomOwner && !finalEstimate && safeVotes.length > 0 && (
-          <div className="pt-2">
-            <p className="text-xs text-slate-500 text-center">
-              💡 Click the green checkmark below any voted value to set it as the final estimate
-            </p>
-          </div>
-        )}
 
         {/* Show Final Estimate if Set */}
         {finalEstimate && (
-          <div className="pt-3 border-t border-slate-200">
-            <div className="rounded-lg border border-green-300 bg-green-50 p-4">
-              <div className="flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-600 mr-2" />
+          <div className="pt-4 border-t border-slate-200">
+            <div className="rounded-xl border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 p-6 shadow-md">
+              <div className="flex items-center justify-center gap-4">
+                <div className="p-3 bg-green-500 rounded-full">
+                  <CheckCircle2 className="w-8 h-8 text-white" />
+                </div>
                 <div className="text-center">
-                  <p className="text-xs font-semibold text-green-700 uppercase">Final Estimate</p>
-                  <p className="text-3xl font-bold text-green-900">{finalEstimate}</p>
+                  <p className="text-sm font-bold text-green-700 uppercase mb-1">Final Estimate</p>
+                  <p className="text-5xl font-bold text-green-900">{finalEstimate}</p>
                 </div>
               </div>
             </div>
